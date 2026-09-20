@@ -1,5 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { canAccessFinancials, isAdminOrAbove } from "@/types/database";
+import type { Profile } from "@/types/database";
+
+// Route prefixes gated by role, checked in order — first match wins.
+// /keuangan and /laporan: owner/admin/manager. /team: owner/admin only.
+const ROLE_GATES: { prefix: string; allowed: (profile: Pick<Profile, "role" | "is_owner">) => boolean }[] = [
+  { prefix: "/team", allowed: isAdminOrAbove },
+  { prefix: "/keuangan", allowed: canAccessFinancials },
+  { prefix: "/laporan", allowed: canAccessFinancials },
+];
 
 // Next.js 16 renamed the "middleware" file convention to "proxy" (same
 // behavior, runs on the Node.js runtime by default now instead of Edge —
@@ -45,6 +55,21 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
+  }
+
+  const gate = user && ROLE_GATES.find((g) => request.nextUrl.pathname.startsWith(g.prefix));
+  if (gate) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, is_owner")
+      .eq("id", user!.id)
+      .single<Pick<Profile, "role" | "is_owner">>();
+
+    if (!profile || !gate.allowed(profile)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;

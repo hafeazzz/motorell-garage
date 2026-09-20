@@ -2,7 +2,34 @@
 // Once the project is live, swap these for generated types:
 //   npx supabase gen types typescript --project-id <ref> > src/types/database.ts
 
-export type Role = "admin" | "staff";
+export type Role = "owner" | "admin" | "manager" | "staff";
+
+// Lower index = more privileged. Used by the helpers below instead of a
+// chain of ===/|| checks, so adding a role later only means editing this list.
+const ROLE_RANK: Record<Role, number> = { owner: 0, admin: 1, manager: 2, staff: 3 };
+
+export function isOwner(profile: Pick<Profile, "role" | "is_owner">): boolean {
+  return profile.role === "owner" || profile.is_owner;
+}
+
+export function isAdmin(profile: Pick<Profile, "role">): boolean {
+  return profile.role === "admin";
+}
+
+/** Owner or admin — full operational access short of literal ownership. */
+export function isAdminOrAbove(profile: Pick<Profile, "role" | "is_owner">): boolean {
+  return isOwner(profile) || ROLE_RANK[profile.role] <= ROLE_RANK.admin;
+}
+
+/** Owner, admin, or manager — the roles allowed into /keuangan and /laporan. */
+export function canAccessFinancials(profile: Pick<Profile, "role" | "is_owner">): boolean {
+  return isOwner(profile) || ROLE_RANK[profile.role] <= ROLE_RANK.manager;
+}
+
+/** Owner or admin — the roles allowed to add/edit/remove team accounts. */
+export function canManageUsers(profile: Pick<Profile, "role" | "is_owner">): boolean {
+  return isAdminOrAbove(profile);
+}
 export type UnitStatus = "progress" | "ready" | "booked" | "sold";
 export type AttendanceStatus = "masuk" | "tidak";
 export type TaskStatus = "pending" | "progress" | "done";

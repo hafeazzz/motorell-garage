@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { rupiah, formatDateStr, formatMonthYear, periodKey } from "@/lib/utils";
-import { unitTotalModal, unitProfit } from "@/types/database";
+import { unitTotalModal, unitProfit, canAccessFinancials } from "@/types/database";
 import type { Profile, Unit, UnitExpense } from "@/types/database";
 
 export default async function LaporanPage() {
@@ -14,7 +14,7 @@ export default async function LaporanPage() {
     .select("*")
     .eq("id", user!.id)
     .single<Profile>();
-  const isAdmin = profile?.role === "admin";
+  const canSeeProfit = !!profile && canAccessFinancials(profile);
 
   const now = new Date();
   const thisMonth = periodKey(now);
@@ -85,13 +85,13 @@ export default async function LaporanPage() {
               {unit.nama} {unit.tahun}
             </span>
             <span style={{ color: "var(--text-secondary)", fontSize: 11.5 }}>
-              {isAdmin ? `${Math.round((profit / (unit.harga_jual || 1)) * 100)}% profit` : ""}
+              {canSeeProfit ? `${Math.round((profit / (unit.harga_jual || 1)) * 100)}% profit` : ""}
             </span>
           </div>
         ))}
       </div>
 
-      {isAdmin && best && (
+      {canSeeProfit && best && (
         <div
           style={{
             background: "var(--card-bg)",

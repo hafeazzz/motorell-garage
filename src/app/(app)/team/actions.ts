@@ -3,25 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { requireCanManageUsers } from "@/lib/auth-utils";
 import type { Role } from "@/types/database";
 
-async function assertOwner() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not signed in");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_owner")
-    .eq("id", user.id)
-    .single();
-  if (!profile?.is_owner) throw new Error("Only the owner can do this");
-}
-
 export async function updatePosition(profileId: string, position: string) {
-  await assertOwner();
+  await requireCanManageUsers();
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update({ position }).eq("id", profileId);
   if (error) throw new Error(error.message);
@@ -29,7 +15,7 @@ export async function updatePosition(profileId: string, position: string) {
 }
 
 export async function updateRole(profileId: string, role: Role) {
-  await assertOwner();
+  await requireCanManageUsers();
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update({ role }).eq("id", profileId);
   if (error) throw new Error(error.message);
@@ -37,7 +23,7 @@ export async function updateRole(profileId: string, role: Role) {
 }
 
 export async function updateTracksAttendance(profileId: string, tracksAttendance: boolean) {
-  await assertOwner();
+  await requireCanManageUsers();
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
@@ -49,7 +35,7 @@ export async function updateTracksAttendance(profileId: string, tracksAttendance
 }
 
 export async function renameProfile(profileId: string, name: string) {
-  await assertOwner();
+  await requireCanManageUsers();
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update({ name: name.trim() }).eq("id", profileId);
   if (error) throw new Error(error.message);
@@ -57,7 +43,7 @@ export async function renameProfile(profileId: string, name: string) {
 }
 
 export async function deleteAccount(profileId: string) {
-  await assertOwner();
+  await requireCanManageUsers();
   // Deleting the auth user (service role only) cascades to `profiles`
   // via its `on delete cascade` foreign key.
   const admin = createServiceRoleClient();
@@ -67,7 +53,7 @@ export async function deleteAccount(profileId: string) {
 }
 
 export async function createAccount(formData: FormData) {
-  await assertOwner();
+  await requireCanManageUsers();
 
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
