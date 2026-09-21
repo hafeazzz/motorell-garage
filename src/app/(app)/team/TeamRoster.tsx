@@ -8,11 +8,11 @@ import {
   renameProfile,
   deleteAccount,
 } from "./actions";
-import type { Profile, Role } from "@/types/database";
+import type { TeamProfile, Role } from "@/types/database";
 
 const POSITIONS = ["Freelancer", "Mechanic", "Field", "Finance", "Admin", "Master"];
 
-export function TeamRoster({ profiles }: { profiles: Profile[] }) {
+export function TeamRoster({ profiles }: { profiles: TeamProfile[] }) {
   return (
     <div>
       {profiles.map((p) =>
@@ -22,7 +22,7 @@ export function TeamRoster({ profiles }: { profiles: Profile[] }) {
   );
 }
 
-function OwnerCard({ profile }: { profile: Profile }) {
+function OwnerCard({ profile }: { profile: TeamProfile }) {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(profile.name);
   const [isPending, startTransition] = useTransition();
@@ -63,7 +63,7 @@ function OwnerCard({ profile }: { profile: Profile }) {
   );
 }
 
-function MemberCard({ profile }: { profile: Profile }) {
+function MemberCard({ profile }: { profile: TeamProfile }) {
   const [isPending, startTransition] = useTransition();
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(profile.name);

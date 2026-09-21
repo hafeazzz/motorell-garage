@@ -54,3 +54,17 @@ a {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Loading skeletons — this project has no Tailwind (see package.json), so
+   this is the plain-CSS equivalent of a `animate-pulse` utility class. Used
+   by src/components/Skeleton.tsx from each route's loading.tsx. */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  background: var(--card-bg-alt);
+  border-radius: 8px;
+}

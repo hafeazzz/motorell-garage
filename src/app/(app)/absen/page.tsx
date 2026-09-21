@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatFullDate, todayIso } from "@/lib/utils";
 import { CheckInCard } from "./CheckInCard";
-import type { Profile, Attendance, AttendanceStatus } from "@/types/database";
+import type { Attendance, AttendanceStatus, Profile } from "@/types/database";
+
+type AbsenProfile = Pick<Profile, "name" | "is_owner" | "tracks_attendance" | "role" | "position">;
+type RosterProfile = Pick<Profile, "id" | "name" | "position">;
+type RosterAttendance = Pick<Attendance, "user_id" | "status">;
 
 export default async function AbsenPage() {
   const supabase = await createClient();
@@ -9,38 +13,46 @@ export default async function AbsenPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user!.id)
-    .single<Profile>();
-
   const today = todayIso();
 
-  const { data: myAttendance } = await supabase
-    .from("attendance")
-    .select("status")
-    .eq("user_id", user!.id)
-    .eq("date", today)
-    .maybeSingle<{ status: AttendanceStatus }>();
+  // Neither query below depends on the other's result (both only need the
+  // already-resolved user id), so they run concurrently instead of as two
+  // sequential round trips.
+  const [{ data: profile }, { data: myAttendance }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("name, is_owner, tracks_attendance, role, position")
+      .eq("id", user!.id)
+      .single<AbsenProfile>(),
+    supabase
+      .from("attendance")
+      .select("status")
+      .eq("user_id", user!.id)
+      .eq("date", today)
+      .maybeSingle<{ status: AttendanceStatus }>(),
+  ]);
 
   const skipCheckIn = profile?.is_owner || profile?.tracks_attendance === false;
 
-  let roster: Profile[] = [];
-  let attendanceToday: Attendance[] = [];
+  let roster: RosterProfile[] = [];
+  let attendanceToday: RosterAttendance[] = [];
   if (profile?.role === "admin") {
-    const { data: allProfiles } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("tracks_attendance", true)
-      .returns<Profile[]>();
+    // These two are also independent of each other — fetched in parallel.
+    const [{ data: allProfiles }, { data: allAttendance }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, name, position")
+        .eq("tracks_attendance", true)
+        .limit(200)
+        .returns<RosterProfile[]>(),
+      supabase
+        .from("attendance")
+        .select("user_id, status")
+        .eq("date", today)
+        .limit(200)
+        .returns<RosterAttendance[]>(),
+    ]);
     roster = allProfiles ?? [];
-
-    const { data: allAttendance } = await supabase
-      .from("attendance")
-      .select("*")
-      .eq("date", today)
-      .returns<Attendance[]>();
     attendanceToday = allAttendance ?? [];
   }
 

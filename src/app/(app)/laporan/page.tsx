@@ -4,26 +4,35 @@ import { rupiah, formatDateStr, formatMonthYear, periodKey } from "@/lib/utils";
 import { unitTotalModal, unitProfit, canAccessFinancials } from "@/types/database";
 import type { Profile, Unit, UnitExpense } from "@/types/database";
 
+// Narrowed row shapes — only the fields this page actually reads out of
+// each table (see the select() calls below for why).
+type LaporanProfile = Pick<Profile, "role" | "is_owner">;
+type LaporanUnit = Pick<Unit, "id" | "nama" | "tahun" | "plat" | "harga_jual" | "modal_beli" | "tanggal_jual">;
+type LaporanExpense = Pick<UnitExpense, "unit_id" | "nominal">;
+
 export default async function LaporanPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user!.id)
-    .single<Profile>();
+
+  // The profile lookup and the sold-units lookup don't depend on each
+  // other (only on the already-resolved user id / a fixed status filter),
+  // so they run concurrently instead of as two sequential round trips.
+  const [{ data: profile }, { data: soldUnits }] = await Promise.all([
+    supabase.from("profiles").select("role, is_owner").eq("id", user!.id).single<LaporanProfile>(),
+    supabase
+      .from("units")
+      .select("id, nama, tahun, plat, harga_jual, modal_beli, tanggal_jual")
+      .eq("status", "sold")
+      .order("tanggal_jual", { ascending: false })
+      .limit(200)
+      .returns<LaporanUnit[]>(),
+  ]);
   const canSeeProfit = !!profile && canAccessFinancials(profile);
 
   const now = new Date();
   const thisMonth = periodKey(now);
-
-  const { data: soldUnits } = await supabase
-    .from("units")
-    .select("*")
-    .eq("status", "sold")
-    .returns<Unit[]>();
 
   // Filter to units sold in the current calendar month (older sold units
   // stay in `units` here in the scaffold — port the monthly-reset cron's
@@ -34,10 +43,10 @@ export default async function LaporanPage() {
   const { data: expenses } = thisMonthSold.length
     ? await supabase
         .from("unit_expenses")
-        .select("*")
+        .select("unit_id, nominal")
         .in("unit_id", thisMonthSold.map((u) => u.id))
-        .returns<UnitExpense[]>()
-    : { data: [] as UnitExpense[] };
+        .returns<LaporanExpense[]>()
+    : { data: [] as LaporanExpense[] };
 
   const withProfit = thisMonthSold
     .map((u) => {

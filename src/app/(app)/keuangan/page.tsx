@@ -21,14 +21,20 @@ const STATUS_FG: Record<UnitStatus, string> = {
   sold: "var(--cream-blue-fg)",
 };
 
+// Only what this list view renders — trims the row payload versus select("*"),
+// which also pulled odometer/finance_code/booking_nominal/photo_url/timestamps
+// that never reach the page.
+type KeuanganUnit = Pick<Unit, "id" | "nama" | "tahun" | "plat" | "status" | "harga_jual" | "tgl_masuk">;
+
 export default async function KeuanganPage() {
   const supabase = await createClient();
   const { data: units } = await supabase
     .from("units")
-    .select("*")
+    .select("id, nama, tahun, plat, status, harga_jual, tgl_masuk")
     .neq("status", "sold")
     .order("tgl_masuk", { ascending: false })
-    .returns<Unit[]>();
+    .limit(200)
+    .returns<KeuanganUnit[]>();
 
   const list = units ?? [];
   const ready = list.filter((u) => u.status === "ready").length;
