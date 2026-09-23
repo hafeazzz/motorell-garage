@@ -78,7 +78,11 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Run on everything except static assets and image optimization files.
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Run on everything except static assets, image optimization files, and
+    // sw.js — that last one matters: without it, the auth check redirects
+    // an unauthenticated service-worker registration request to /login's
+    // HTML instead of serving the actual script, and registration fails
+    // silently (the browser rejects a non-JS response for a SW script).
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
