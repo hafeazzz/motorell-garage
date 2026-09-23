@@ -1,7 +1,24 @@
 "use client";
 
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
+import { useSearchParams } from "next/navigation";
 import { signIn, type SignInState } from "./actions";
+
+const URL_ERROR_MESSAGES: Record<string, string> = {
+  "no-profile":
+    "Your account isn't set up yet — signed in, but there's no profile for it. Ask the owner to add you from the Team page.",
+};
+
+// useSearchParams() opts a static page out of prerendering unless it's
+// isolated behind a Suspense boundary (Next.js throws a build error
+// otherwise) — split into its own component so only this part waits.
+function UrlError() {
+  // Set by (app)/layout.tsx when it redirects back here (e.g. ?error=no-profile).
+  const searchParams = useSearchParams();
+  const urlError = URL_ERROR_MESSAGES[searchParams.get("error") ?? ""];
+  if (!urlError) return null;
+  return <p style={{ color: "#E7B183", fontSize: 13, margin: 0 }}>{urlError}</p>;
+}
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState<SignInState, FormData>(signIn, {
@@ -65,8 +82,12 @@ export default function LoginPage() {
             />
           </div>
 
-          {state?.error && (
+          {state?.error ? (
             <p style={{ color: "#E7B183", fontSize: 13, margin: 0 }}>{state.error}</p>
+          ) : (
+            <Suspense fallback={null}>
+              <UrlError />
+            </Suspense>
           )}
 
           <button
