@@ -20,7 +20,7 @@ export function BottomNav() {
   const items = profile.is_owner ? [...ITEMS, { href: "/team", label: "Team", icon: Users }] : ITEMS;
 
   return (
-    <nav className="flex flex-none justify-between gap-1 border-t border-border bg-[#0A0A0D] px-2.5 pt-3 pb-4 md:justify-center md:gap-8 lg:gap-12">
+    <nav className="flex flex-none justify-between gap-1 border-t border-border bg-[#0A0A0D] px-2.5 pt-3 pb-4 sm:px-6 md:justify-center md:gap-8 lg:gap-12">
       {items.map((item) => {
         const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         const Icon = item.icon;

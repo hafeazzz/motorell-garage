@@ -33,8 +33,8 @@ export default async function TeamPage() {
 
   return (
     <div>
-      <div className="mb-4 md:mb-6">
-        <h1 className="mb-1 text-xl font-extrabold md:text-2xl">Team</h1>
+      <div className="mb-4 sm:mb-5 md:mb-6">
+        <h1 className="mb-1 text-xl font-extrabold sm:text-[22px] md:text-2xl">Team</h1>
         <p className="text-sm text-muted-foreground">
           Accounts, positions, access, and attendance tracking
         </p>

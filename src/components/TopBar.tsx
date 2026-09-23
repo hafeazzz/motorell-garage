@@ -20,7 +20,7 @@ export function TopBar() {
   const initial = profile.name.charAt(0).toUpperCase();
 
   return (
-    <div className="flex items-center justify-between px-4 pt-5 pb-4 md:px-8 md:pt-7 lg:px-10">
+    <div className="flex items-center justify-between px-4 pt-5 pb-4 sm:px-6 md:px-8 md:pt-7 lg:px-10">
       <div className="flex items-center gap-2.5">
         <div className="size-9 rounded-[11px] bg-[linear-gradient(135deg,#4A2A63,#E4715A)]" />
         <div className="flex flex-col leading-[1.15]">

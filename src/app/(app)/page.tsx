@@ -62,7 +62,9 @@ export default async function HomePage() {
     <div>
       <GreetingCard name={profile?.name ?? "there"} />
 
-      <div className="mb-3.5 grid grid-cols-2 gap-3 md:mb-4 lg:grid-cols-4">
+      {/* Exactly 2 cards render here — lg:grid-cols-4 used to force 2
+          empty grid tracks (visible dead space) on wider screens. */}
+      <div className="mb-3.5 grid grid-cols-2 gap-3 sm:gap-4 sm:mb-4 lg:gap-5">
         <StatCard value={readyCount} label="Units ready" />
         <StatCard value={soldCount} label="Sold this month" />
       </div>

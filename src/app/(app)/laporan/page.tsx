@@ -61,12 +61,12 @@ export default async function LaporanPage() {
 
   return (
     <div>
-      <div className="mb-4 md:mb-6">
-        <h1 className="mb-1 text-xl font-extrabold md:text-2xl">Monthly Report</h1>
+      <div className="mb-4 sm:mb-5 md:mb-6">
+        <h1 className="mb-1 text-xl font-extrabold sm:text-[22px] md:text-2xl">Monthly Report</h1>
         <p className="text-sm text-muted-foreground">{formatMonthYear(now)}</p>
       </div>
 
-      <div className="mb-3.5 rounded-3xl border border-border bg-card px-5 py-5 text-center md:mb-5">
+      <div className="mb-3.5 rounded-3xl border border-border bg-card px-5 py-5 text-center sm:px-6 sm:py-6 md:mb-5">
         <div className="text-4xl font-extrabold">{thisMonthSold.length}</div>
         <div className="mb-4 text-xs text-muted-foreground">units sold</div>
         {withProfit.map(({ unit, profit }) => (

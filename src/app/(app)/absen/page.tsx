@@ -67,12 +67,12 @@ export default async function AbsenPage() {
 
   return (
     <div>
-      <div className="mb-4 md:mb-6">
-        <h1 className="mb-1 text-xl font-extrabold md:text-2xl">Attendance</h1>
+      <div className="mb-4 sm:mb-5 md:mb-6">
+        <h1 className="mb-1 text-xl font-extrabold sm:text-[22px] md:text-2xl">Attendance</h1>
         <p className="text-sm text-muted-foreground">{formatFullDate(new Date())}</p>
       </div>
 
-      <div className="mb-5 rounded-3xl border border-border bg-card px-5 py-6 text-center md:mb-6">
+      <div className="mb-5 rounded-3xl border border-border bg-card px-5 py-6 text-center sm:px-6 sm:py-7 md:mb-6">
         <Avatar className="mx-auto mb-3.5 size-14">
           <AvatarFallback className="bg-[linear-gradient(135deg,#4A2A63,#E4715A)] text-xl font-extrabold text-white">
             {profile?.name.charAt(0).toUpperCase()}
