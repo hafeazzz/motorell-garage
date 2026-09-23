@@ -46,8 +46,41 @@ export function todayIso(): string {
 type Period = "pagi" | "siang" | "sore" | "malam";
 
 export function getGreetingPeriod(hour: number): { key: Period; label: string } {
-  if (hour >= 4 && hour < 11) return { key: "pagi", label: "Good morning" };
+  if (hour >= 5 && hour < 11) return { key: "pagi", label: "Good morning" };
   if (hour >= 11 && hour < 15) return { key: "siang", label: "Good afternoon" };
-  if (hour >= 15 && hour < 18) return { key: "sore", label: "Good evening" };
+  if (hour >= 15 && hour < 19) return { key: "sore", label: "Good evening" };
   return { key: "malam", label: "Good night" };
+}
+
+// WIB (Western Indonesia Time, UTC+7, no DST) — hardcoded rather than read
+// from the process's own timezone, because that's the wrong source of truth
+// here: Vercel runs Node server processes in UTC regardless of where the
+// garage's staff actually are, so `new Date().getHours()` on the server
+// returns the UTC hour, not Indonesia's. This is what caused "Good Night"
+// to show at 9am WIB (2am UTC falls in the night bucket).
+const JAKARTA_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+function jakartaParts(date: Date) {
+  const shifted = new Date(date.getTime() + JAKARTA_OFFSET_MS);
+  // Reading UTC fields off the shifted timestamp — rather than local fields
+  // off the original — makes this correct regardless of the host process's
+  // own timezone (UTC on Vercel, possibly something else in local dev).
+  return {
+    hour: shifted.getUTCHours(),
+    dayOfWeek: shifted.getUTCDay(),
+    date: shifted.getUTCDate(),
+    month: shifted.getUTCMonth(),
+  };
+}
+
+/** Indonesia (WIB) hour-of-day for `date`, independent of server timezone. */
+export function jakartaHour(date: Date): number {
+  return jakartaParts(date).hour;
+}
+
+/** Like formatFullDate, but reads Indonesia (WIB) wall-clock fields instead
+ * of whatever timezone the server process happens to run in. */
+export function formatFullDateJakarta(date: Date): string {
+  const p = jakartaParts(date);
+  return `${DAYS[p.dayOfWeek]}, ${p.date} ${MONTHS[p.month]}`;
 }
