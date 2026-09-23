@@ -59,11 +59,12 @@ export async function proxy(request: NextRequest) {
 
   const gate = user && ROLE_GATES.find((g) => request.nextUrl.pathname.startsWith(g.prefix));
   if (gate) {
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from("profiles")
       .select("role, is_owner")
       .eq("id", user!.id)
       .single<Pick<Profile, "role" | "is_owner">>();
+    if (error) console.error("proxy: role-gate profile lookup failed for user", user!.id, error);
 
     if (!profile || !gate.allowed(profile)) {
       const url = request.nextUrl.clone();

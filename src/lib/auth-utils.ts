@@ -10,11 +10,12 @@ export async function getCurrentProfile(): Promise<Profile> {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not signed in");
 
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single<Profile>();
+  if (error) console.error("getCurrentProfile: query failed for user", user.id, error);
   if (!profile) throw new Error("No profile found for this account");
 
   return profile;

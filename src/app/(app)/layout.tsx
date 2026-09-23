@@ -16,15 +16,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Server Components can't assume that ran, so check again here.
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single<Profile>();
 
+  if (profileError) {
+    // PGRST116 = "no rows" — that's the genuine no-profile case. Anything
+    // else (RLS denial, permission error, network blip) got misreported as
+    // "no profile" before this log existed, with zero trail to debug it.
+    // Check your terminal / Vercel function logs for this line.
+    console.error("(app)/layout: profile lookup failed for user", user.id, profileError);
+  }
+
   if (!profile) {
-    // Auth user exists but nobody made them a profiles row yet —
-    // ask the owner to add them from the Team page.
+    // Auth user exists but either there's no profiles row for them yet, or
+    // the query above errored (see the log line right above this).
     redirect("/login?error=no-profile");
   }
 
