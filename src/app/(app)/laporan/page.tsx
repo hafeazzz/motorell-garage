@@ -61,112 +61,76 @@ export default async function LaporanPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 18 }}>
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Monthly Report</div>
-        <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{formatMonthYear(now)}</div>
+      <div className="mb-4 md:mb-6">
+        <h1 className="mb-1 text-xl font-extrabold md:text-2xl">Monthly Report</h1>
+        <p className="text-sm text-muted-foreground">{formatMonthYear(now)}</p>
       </div>
 
-      <div
-        style={{
-          background: "var(--card-bg)",
-          border: "1px solid var(--border-subtle)",
-          borderRadius: 24,
-          padding: "22px 20px",
-          marginBottom: 14,
-          textAlign: "center",
-        }}
-      >
-        <div style={{ fontSize: 36, fontWeight: 800 }}>{thisMonthSold.length}</div>
-        <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 16 }}>units sold</div>
+      <div className="mb-3.5 rounded-3xl border border-border bg-card px-5 py-5 text-center md:mb-5">
+        <div className="text-4xl font-extrabold">{thisMonthSold.length}</div>
+        <div className="mb-4 text-xs text-muted-foreground">units sold</div>
         {withProfit.map(({ unit, profit }) => (
-          <div
-            key={unit.id}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "9px 0",
-              borderTop: "1px solid var(--border-subtle)",
-              fontSize: 13,
-              textAlign: "left",
-            }}
-          >
+          <div key={unit.id} className="flex justify-between border-t border-border py-2.5 text-left text-[13px]">
             <span>
               {unit.nama} {unit.tahun}
             </span>
-            <span style={{ color: "var(--text-secondary)", fontSize: 11.5 }}>
+            <span className="text-[11.5px] text-muted-foreground">
               {canSeeProfit ? `${Math.round((profit / (unit.harga_jual || 1)) * 100)}% profit` : ""}
             </span>
           </div>
         ))}
       </div>
 
-      {canSeeProfit && best && (
-        <div
-          style={{
-            background: "var(--card-bg)",
-            border: "1px solid var(--border-subtle)",
-            borderRadius: 20,
-            padding: 20,
-            marginBottom: 18,
-          }}
-        >
-          <div style={{ fontSize: 12.5, color: "var(--text-secondary)", marginBottom: 10 }}>
-            🏆 Best-selling unit this month
-          </div>
-          <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 18 }}>
-            {best.unit.nama} {best.unit.tahun}
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Sale price</div>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>{rupiah(best.unit.harga_jual ?? 0)}</div>
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+        {canSeeProfit && best && (
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="mb-2.5 text-[12.5px] text-muted-foreground">🏆 Best-selling unit this month</div>
+            <div className="mb-4.5 text-lg font-extrabold">
+              {best.unit.nama} {best.unit.tahun}
             </div>
-            <div>
-              <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Gross profit</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "var(--accent-green)" }}>
-                {rupiah(best.profit)}
+            <div className="flex justify-between">
+              <div>
+                <div className="text-xs text-muted-foreground">Sale price</div>
+                <div className="text-base font-extrabold">{rupiah(best.unit.harga_jual ?? 0)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Gross profit</div>
+                <div className="text-base font-extrabold text-primary">{rupiah(best.profit)}</div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {thisMonthSold.length > 0 && (
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-secondary)", margin: "18px 0 12px" }}>
-            Sold unit records
+        {thisMonthSold.length > 0 && (
+          <div className={canSeeProfit && best ? "" : "lg:col-span-2"}>
+            <div className="mt-4.5 mb-3 text-[13px] font-bold text-muted-foreground lg:mt-0">
+              Sold unit records
+            </div>
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {withProfit.map(({ unit }) => (
+                <Link
+                  key={unit.id}
+                  href={`/keuangan/${unit.id}`}
+                  className="flex items-center gap-3.5 rounded-[18px] border border-border bg-card p-3.5 transition-colors hover:bg-secondary/40"
+                >
+                  <div className="size-[52px] shrink-0 rounded-[14px] bg-[image:var(--cream-blue-bg)]" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-bold">{unit.nama}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {unit.plat} · {unit.tahun}
+                    </div>
+                    <div className="mt-0.5 text-[11.5px] font-bold text-[var(--cream-blue-fg)]">
+                      Sold: {formatDateStr(unit.tanggal_jual)}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
-          {withProfit.map(({ unit }) => (
-            <Link
-              key={unit.id}
-              href={`/keuangan/${unit.id}`}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                background: "var(--card-bg)",
-                border: "1px solid var(--border-subtle)",
-                borderRadius: 18,
-                padding: 14,
-                marginBottom: 12,
-              }}
-            >
-              <div style={{ width: 52, height: 52, borderRadius: 14, flex: "none", background: "var(--cream-blue-bg)" }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700 }}>{unit.nama}</div>
-                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                  {unit.plat} · {unit.tahun}
-                </div>
-                <div style={{ fontSize: 11.5, color: "var(--cream-blue-fg)", fontWeight: 700, marginTop: 3 }}>
-                  Sold: {formatDateStr(unit.tanggal_jual)}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+        )}
+      </div>
 
-      <p style={{ fontSize: 12, color: "var(--text-tertiary)", textAlign: "center", marginTop: 16, lineHeight: 1.5 }}>
+      <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">
         Tap a sold unit to keep editing it — it opens the same Finance detail
         page. Month-to-month archiving runs from the monthly-reset cron job.
       </p>

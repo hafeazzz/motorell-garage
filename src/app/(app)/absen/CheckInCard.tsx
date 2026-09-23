@@ -2,6 +2,8 @@
 
 import { useTransition } from "react";
 import { checkIn } from "./actions";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { AttendanceStatus } from "@/types/database";
 
 export function CheckInCard({ existingStatus }: { existingStatus: AttendanceStatus | null }) {
@@ -9,9 +11,9 @@ export function CheckInCard({ existingStatus }: { existingStatus: AttendanceStat
 
   if (existingStatus) {
     return (
-      <p style={{ fontSize: 14, fontWeight: 600 }}>
+      <p className="text-sm font-semibold">
         You&apos;re marked{" "}
-        <span style={{ color: existingStatus === "masuk" ? "var(--accent-green)" : "#E7B183" }}>
+        <span className={existingStatus === "masuk" ? "text-primary" : "text-[#E7B183]"}>
           {existingStatus === "masuk" ? "Present" : "Absent"}
         </span>{" "}
         today.
@@ -20,38 +22,22 @@ export function CheckInCard({ existingStatus }: { existingStatus: AttendanceStat
   }
 
   return (
-    <div style={{ display: "flex", gap: 10 }}>
-      <button
+    <div className="flex gap-2.5">
+      <Button
         disabled={isPending}
         onClick={() => startTransition(() => checkIn("masuk"))}
-        style={{
-          flex: 1,
-          padding: 14,
-          borderRadius: 16,
-          fontWeight: 700,
-          fontSize: 14,
-          background: "var(--accent-green)",
-          color: "#04241A",
-        }}
+        className="h-auto flex-1 rounded-2xl py-3.5 text-sm font-bold"
       >
         Check In
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="outline"
         disabled={isPending}
         onClick={() => startTransition(() => checkIn("tidak"))}
-        style={{
-          flex: 1,
-          padding: 14,
-          borderRadius: 16,
-          fontWeight: 700,
-          fontSize: 14,
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid var(--border-subtle)",
-          color: "var(--text-primary)",
-        }}
+        className={cn("h-auto flex-1 rounded-2xl bg-secondary py-3.5 text-sm font-bold")}
       >
         Absent
-      </button>
+      </Button>
     </div>
   );
 }

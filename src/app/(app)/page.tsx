@@ -59,10 +59,10 @@ export default async function HomePage() {
   }
 
   return (
-    <div style={{ paddingTop: 0 }}>
+    <div>
       <GreetingCard name={profile?.name ?? "there"} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+      <div className="mb-3.5 grid grid-cols-2 gap-3 md:mb-4 lg:grid-cols-4">
         <StatCard value={readyCount} label="Units ready" />
         <StatCard value={soldCount} label="Sold this month" />
       </div>
@@ -70,7 +70,7 @@ export default async function HomePage() {
       {isAdmin && (
         <>
           <ProfitCard netProfit={netProfit} monthlyTarget={monthlyTarget} />
-          <div style={{ height: 14 }} />
+          <div className="h-3.5" />
         </>
       )}
 
@@ -81,16 +81,9 @@ export default async function HomePage() {
 
 function StatCard({ value, label }: { value: number; label: string }) {
   return (
-    <div
-      style={{
-        background: "var(--card-bg)",
-        border: "1px solid var(--border-subtle)",
-        borderRadius: 20,
-        padding: 18,
-      }}
-    >
-      <div style={{ fontSize: 32, fontWeight: 800, lineHeight: 1, marginBottom: 6 }}>{value}</div>
-      <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{label}</div>
+    <div className="rounded-[20px] border border-border bg-card p-4.5">
+      <div className="mb-1.5 text-[32px] leading-none font-extrabold">{value}</div>
+      <div className="text-[13px] text-muted-foreground">{label}</div>
     </div>
   );
 }

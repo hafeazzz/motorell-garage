@@ -33,11 +33,11 @@ export default async function TeamPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 18 }}>
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Team</div>
-        <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+      <div className="mb-4 md:mb-6">
+        <h1 className="mb-1 text-xl font-extrabold md:text-2xl">Team</h1>
+        <p className="text-sm text-muted-foreground">
           Accounts, positions, access, and attendance tracking
-        </div>
+        </p>
       </div>
 
       <AddAccountForm />

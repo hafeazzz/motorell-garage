@@ -1,8 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Trash2 } from "lucide-react";
 import { useProfile } from "@/lib/profile-context";
 import { toggleTaskStatus, addTask, deleteTask } from "@/app/(app)/actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { Task } from "@/types/database";
 
 export function TaskList({ tasks }: { tasks: Task[] }) {
@@ -18,62 +22,41 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
   const pct = tasks.length ? Math.round((doneCount / tasks.length) * 100) : 0;
 
   return (
-    <div
-      style={{
-        background: "var(--card-bg)",
-        border: "1px solid var(--border-subtle)",
-        borderRadius: 20,
-        padding: "20px 18px",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ fontSize: 15, fontWeight: 700 }}>Today Task</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+    <div className="rounded-2xl border border-border bg-card px-4.5 py-5">
+      <div className="flex items-center justify-between">
+        <div className="text-[15px] font-bold">Today Task</div>
+        <div className="flex items-center gap-2.5">
+          <span className="text-xs text-muted-foreground">
             {doneCount} of {tasks.length} done
           </span>
           {isAdmin && (
-            <button
-              onClick={() => setEditing((v) => !v)}
-              style={miniBtn}
-            >
+            <Button size="sm" variant="secondary" className="h-auto rounded-full px-3 py-1 text-[11.5px]" onClick={() => setEditing((v) => !v)}>
               {editing ? "Done" : "Edit"}
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
-      <div
-        style={{
-          width: "100%",
-          height: 5,
-          borderRadius: 10,
-          background: "rgba(255,255,255,0.07)",
-          margin: "14px 0 16px",
-          overflow: "hidden",
-        }}
-      >
+      <div className="my-3.5 h-[5px] w-full overflow-hidden rounded-full bg-white/[0.07]">
         <div
-          style={{
-            height: "100%",
-            width: `${pct}%`,
-            background: "var(--accent-green)",
-            transition: "width .6s var(--ease-out-expo)",
-          }}
+          className="h-full rounded-full bg-primary transition-[width] duration-500 ease-[var(--ease-out-expo)]"
+          style={{ width: `${pct}%` }}
         />
       </div>
 
       {tasks.map((task) => {
         if (confirmingId === task.id) {
           return (
-            <div key={task.id} style={{ ...taskRow, justifyContent: "space-between" }}>
-              <span style={{ fontSize: 13 }}>Delete &ldquo;{task.name}&rdquo;?</span>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button style={miniBtn} onClick={() => setConfirmingId(null)}>
+            <div key={task.id} className="mb-2.5 flex items-center justify-between gap-2.5 rounded-[14px] bg-secondary px-3.5 py-3">
+              <span className="text-[13px]">Delete &ldquo;{task.name}&rdquo;?</span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="secondary" className="h-auto rounded-full px-3 py-1 text-[11.5px]" onClick={() => setConfirmingId(null)}>
                   Cancel
-                </button>
-                <button
-                  style={{ ...miniBtn, background: "#E7B183", color: "#3A2410" }}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-auto rounded-full px-3 py-1 text-[11.5px]"
                   onClick={() =>
                     startTransition(async () => {
                       await deleteTask(task.id);
@@ -82,77 +65,68 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                   }
                 >
                   Delete
-                </button>
+                </Button>
               </div>
             </div>
           );
         }
 
         return (
-          <div key={task.id} style={taskRow}>
+          <div key={task.id} className="mb-2.5 flex items-center gap-2.5 rounded-[14px] bg-secondary px-3.5 py-3">
             <button
               disabled={isPending}
               onClick={() => startTransition(() => toggleTaskStatus(task.id, task.status))}
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: "50%",
-                flex: "none",
-                border: `2px solid ${task.status === "done" ? "var(--accent-green)" : "rgba(255,255,255,0.22)"}`,
-                background: task.status === "done" ? "var(--accent-green)" : "transparent",
-              }}
+              className={cn(
+                "size-[22px] shrink-0 rounded-full border-2",
+                task.status === "done" ? "border-primary bg-primary" : "border-white/20 bg-transparent"
+              )}
               aria-label="Toggle done"
             />
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="min-w-0 flex-1">
               <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  textDecoration: task.status === "done" ? "line-through" : "none",
-                  color: task.status === "done" ? "var(--text-tertiary)" : "var(--text-primary)",
-                }}
+                className={cn(
+                  "text-sm font-semibold",
+                  task.status === "done" ? "text-muted-foreground line-through" : "text-foreground"
+                )}
               >
                 {task.name}
               </div>
-              <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+              <div className="text-xs text-muted-foreground">
                 {task.assignee ? `Assigned to ${task.assignee}` : "Unassigned"}
               </div>
             </div>
             {editing && (
-              <button style={iconBtn} onClick={() => setConfirmingId(task.id)} aria-label="Delete task">
-                🗑
-              </button>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="rounded-lg bg-card"
+                onClick={() => setConfirmingId(task.id)}
+                aria-label="Delete task"
+              >
+                <Trash2 className="size-3" />
+              </Button>
             )}
           </div>
         );
       })}
 
       {editing && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            marginTop: 12,
-            background: "var(--card-bg-alt)",
-            borderRadius: 14,
-            padding: 12,
-          }}
-        >
-          <input
+        <div className="mt-3 flex flex-col gap-2 rounded-[14px] bg-secondary p-3">
+          <Input
             placeholder="Task name"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            style={fieldInput}
+            className="h-9 bg-card text-[13px]"
           />
-          <input
+          <Input
             placeholder="Assigned to (optional)"
             value={newAssignee}
             onChange={(e) => setNewAssignee(e.target.value)}
-            style={fieldInput}
+            className="h-9 bg-card text-[13px]"
           />
-          <button
-            style={{ ...miniBtn, background: "var(--accent-green)", color: "#04241A", alignSelf: "flex-end" }}
+          <Button
+            size="sm"
+            className="self-end rounded-full px-3.5"
             onClick={() =>
               startTransition(async () => {
                 if (!newName.trim()) return;
@@ -163,49 +137,9 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
             }
           >
             Add task
-          </button>
+          </Button>
         </div>
       )}
     </div>
   );
 }
-
-const taskRow: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  background: "var(--card-bg-alt)",
-  borderRadius: 14,
-  padding: "12px 14px",
-  marginBottom: 10,
-};
-
-const miniBtn: React.CSSProperties = {
-  fontSize: 11.5,
-  fontWeight: 700,
-  padding: "5px 12px",
-  borderRadius: 20,
-  background: "var(--card-bg-alt)",
-  border: "1px solid var(--border-subtle)",
-};
-
-const iconBtn: React.CSSProperties = {
-  width: 26,
-  height: 26,
-  borderRadius: 8,
-  background: "var(--card-bg)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flex: "none",
-  fontSize: 12,
-};
-
-const fieldInput: React.CSSProperties = {
-  background: "var(--card-bg)",
-  border: "1px solid var(--border-subtle)",
-  borderRadius: 10,
-  padding: "9px 12px",
-  color: "var(--text-primary)",
-  fontSize: 13,
-};

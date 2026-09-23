@@ -1,8 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Plus } from "lucide-react";
 import { createAccount } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
+const POSITIONS = ["Freelancer", "Mechanic", "Field", "Finance", "Admin", "Master"];
+
+// Kept as native <select>/<input> elements rather than shadcn's Select —
+// this form submits via a plain server action reading FormData, and native
+// form controls guarantee they show up in that FormData with zero extra
+// wiring. TeamRoster's role/position pickers use shadcn's Select instead,
+// since those are already controlled (onValueChange), not form-submitted.
 export function AddAccountForm() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -10,26 +21,14 @@ export function AddAccountForm() {
 
   if (!open) {
     return (
-      <button
+      <Button
+        variant="outline"
         onClick={() => setOpen(true)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          width: "100%",
-          background: "var(--card-bg-alt)",
-          border: "1px solid var(--border-subtle)",
-          color: "var(--text-primary)",
-          borderRadius: 16,
-          padding: 13,
-          fontSize: 13.5,
-          fontWeight: 700,
-          marginBottom: 14,
-        }}
+        className="mb-3.5 w-full gap-2 rounded-2xl border-border bg-secondary py-6 text-[13.5px] font-bold md:mb-5 md:w-auto"
       >
-        + Add account
-      </button>
+        <Plus className="size-4" />
+        Add account
+      </Button>
     );
   }
 
@@ -46,73 +45,52 @@ export function AddAccountForm() {
           }
         })
       }
-      style={{
-        background: "var(--card-bg)",
-        border: "1px solid var(--border-subtle)",
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 14,
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-      }}
+      className="mb-3.5 flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-4 md:mb-5 lg:grid lg:grid-cols-2 lg:gap-3"
     >
-      <input name="name" placeholder="Name" required style={inputStyle} />
-      <input name="email" type="email" placeholder="Email" required style={inputStyle} />
-      <input name="password" type="password" placeholder="Temporary password" required style={inputStyle} />
-      <select name="position" defaultValue="Mechanic" style={inputStyle}>
-        {["Freelancer", "Mechanic", "Field", "Finance", "Admin", "Master"].map((p) => (
+      <Input name="name" placeholder="Name" required className="bg-secondary text-sm" />
+      <Input name="email" type="email" placeholder="Email" required className="bg-secondary text-sm" />
+      <Input
+        name="password"
+        type="password"
+        placeholder="Temporary password"
+        required
+        className="bg-secondary text-sm lg:col-span-2"
+      />
+      <select
+        name="position"
+        defaultValue="Mechanic"
+        className="h-9 rounded-lg border border-input bg-secondary px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        {POSITIONS.map((p) => (
           <option key={p} value={p}>
             {p}
           </option>
         ))}
       </select>
-      <select name="role" defaultValue="staff" style={inputStyle}>
+      <select
+        name="role"
+        defaultValue="staff"
+        className="h-9 rounded-lg border border-input bg-secondary px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
         <option value="staff">Staff access</option>
+        <option value="manager">Manager access</option>
         <option value="admin">Admin access</option>
       </select>
-      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5 }}>
-        <input type="checkbox" name="tracks_attendance" defaultChecked />
+      <Label className="flex items-center gap-2 text-[12.5px] font-normal lg:col-span-2">
+        <input type="checkbox" name="tracks_attendance" defaultChecked className="size-4 accent-primary" />
         Track attendance for this account
-      </label>
+      </Label>
 
-      {error && <p style={{ color: "#E7B183", fontSize: 12.5, margin: 0 }}>{error}</p>}
+      {error && <p className="m-0 text-[12.5px] text-destructive lg:col-span-2">{error}</p>}
 
-      <div style={{ display: "flex", gap: 8 }}>
-        <button type="button" onClick={() => setOpen(false)} style={cancelBtn}>
+      <div className="flex gap-2 lg:col-span-2">
+        <Button type="button" variant="secondary" onClick={() => setOpen(false)} className="flex-1">
           Cancel
-        </button>
-        <button type="submit" disabled={isPending} style={submitBtn}>
+        </Button>
+        <Button type="submit" disabled={isPending} className="flex-1">
           {isPending ? "Creating…" : "Create account"}
-        </button>
+        </Button>
       </div>
     </form>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  background: "var(--card-bg-alt)",
-  border: "1px solid var(--border-subtle)",
-  borderRadius: 12,
-  padding: "10px 12px",
-  color: "var(--text-primary)",
-  fontSize: 13,
-};
-const cancelBtn: React.CSSProperties = {
-  flex: 1,
-  background: "var(--card-bg-alt)",
-  border: "1px solid var(--border-subtle)",
-  borderRadius: 12,
-  padding: 11,
-  fontSize: 13,
-  fontWeight: 700,
-};
-const submitBtn: React.CSSProperties = {
-  flex: 1,
-  background: "var(--accent-green)",
-  color: "#04241A",
-  borderRadius: 12,
-  padding: 11,
-  fontSize: 13,
-  fontWeight: 700,
-};

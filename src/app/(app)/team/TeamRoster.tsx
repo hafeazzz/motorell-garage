@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import {
   updatePosition,
   updateRole,
@@ -8,17 +9,52 @@ import {
   renameProfile,
   deleteAccount,
 } from "./actions";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { TeamProfile, Role } from "@/types/database";
 
 const POSITIONS = ["Freelancer", "Mechanic", "Field", "Finance", "Admin", "Master"];
+const ROLE_LABEL: Record<Role, string> = {
+  owner: "Owner",
+  admin: "Admin access",
+  manager: "Manager access",
+  staff: "Staff access",
+};
 
 export function TeamRoster({ profiles }: { profiles: TeamProfile[] }) {
   return (
-    <div>
+    <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
       {profiles.map((p) =>
         p.is_owner ? <OwnerCard key={p.id} profile={p} /> : <MemberCard key={p.id} profile={p} />
       )}
     </div>
+  );
+}
+
+function InitialsAvatar({ name, className }: { name: string; className?: string }) {
+  return (
+    <Avatar className={className ?? "size-10"}>
+      <AvatarFallback className="bg-[linear-gradient(135deg,#4A2A63,#E4715A)] text-sm font-bold text-white">
+        {name.charAt(0).toUpperCase()}
+      </AvatarFallback>
+    </Avatar>
   );
 }
 
@@ -28,26 +64,38 @@ function OwnerCard({ profile }: { profile: TeamProfile }) {
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div style={cardStyle}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <Avatar name={profile.name} />
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 13.5, fontWeight: 700 }}>{profile.name}</span>
-            <span style={ownerTagStyle}>Owner</span>
-            <button style={iconBtn} onClick={() => setRenaming((v) => !v)} aria-label="Rename">
-              ✏️
-            </button>
+    <div className="rounded-2xl border border-border bg-card p-3.5">
+      <div className="flex items-center gap-3">
+        <InitialsAvatar name={profile.name} />
+        <div className="flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13.5px] font-bold">{profile.name}</span>
+            <Badge className="rounded-full bg-[image:var(--cream-green-bg)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--cream-green-fg)]">
+              Owner
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="rounded-lg bg-secondary"
+              onClick={() => setRenaming((v) => !v)}
+              aria-label="Rename"
+            >
+              <Pencil className="size-3" />
+            </Button>
           </div>
-          <div style={{ fontSize: 11.5, color: "var(--text-secondary)" }}>Owner</div>
+          <div className="text-[11.5px] text-muted-foreground">Owner</div>
         </div>
       </div>
       {renaming && (
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
-          <button
+        <div className="mt-2.5 flex gap-2">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-8 flex-1 bg-secondary text-xs"
+          />
+          <Button
+            size="sm"
             disabled={isPending}
-            style={saveBtn}
             onClick={() =>
               startTransition(async () => {
                 if (name.trim()) await renameProfile(profile.id, name);
@@ -56,7 +104,7 @@ function OwnerCard({ profile }: { profile: TeamProfile }) {
             }
           >
             Save
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -69,54 +117,67 @@ function MemberCard({ profile }: { profile: TeamProfile }) {
   const [name, setName] = useState(profile.name);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  if (confirmingDelete) {
-    return (
-      <div style={cardStyle}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <span style={{ fontSize: 12.5 }}>Remove {profile.name}&apos;s account?</span>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button style={miniBtn} onClick={() => setConfirmingDelete(false)}>
-              Cancel
-            </button>
-            <button
-              style={{ ...miniBtn, background: "#E7B183", color: "#3A2410" }}
-              disabled={isPending}
-              onClick={() => startTransition(() => deleteAccount(profile.id))}
-            >
-              Remove
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div style={cardStyle}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <Avatar name={profile.name} />
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 13.5, fontWeight: 700 }}>{profile.name}</span>
-            <button style={iconBtn} onClick={() => setRenaming((v) => !v)} aria-label="Rename">
-              ✏️
-            </button>
+    <div className="rounded-2xl border border-border bg-card p-3.5">
+      <div className="flex items-center gap-3">
+        <InitialsAvatar name={profile.name} />
+        <div className="flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13.5px] font-bold">{profile.name}</span>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="rounded-lg bg-secondary"
+              onClick={() => setRenaming((v) => !v)}
+              aria-label="Rename"
+            >
+              <Pencil className="size-3" />
+            </Button>
           </div>
-          <div style={{ fontSize: 11.5, color: "var(--text-secondary)" }}>
-            {profile.position} · {profile.role === "admin" ? "Admin access" : "Staff access"}
+          <div className="text-[11.5px] text-muted-foreground">
+            {profile.position} · {ROLE_LABEL[profile.role]}
           </div>
         </div>
-        <button style={iconBtn} onClick={() => setConfirmingDelete(true)} aria-label="Remove account">
-          🗑
-        </button>
+        <Dialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="rounded-lg bg-secondary"
+            onClick={() => setConfirmingDelete(true)}
+            aria-label="Remove account"
+          >
+            <Trash2 className="size-3" />
+          </Button>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Remove {profile.name}&apos;s account?</DialogTitle>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setConfirmingDelete(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={isPending}
+                onClick={() => startTransition(() => deleteAccount(profile.id))}
+              >
+                Remove
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {renaming && (
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
-          <button
+        <div className="mt-2.5 flex gap-2">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-8 flex-1 bg-secondary text-xs"
+          />
+          <Button
+            size="sm"
             disabled={isPending}
-            style={saveBtn}
             onClick={() =>
               startTransition(async () => {
                 if (name.trim()) await renameProfile(profile.id, name);
@@ -125,118 +186,49 @@ function MemberCard({ profile }: { profile: TeamProfile }) {
             }
           >
             Save
-          </button>
+          </Button>
         </div>
       )}
 
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-subtle)" }}>
-        <select
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+        <Select
           defaultValue={profile.position}
-          onChange={(e) => startTransition(() => updatePosition(profile.id, e.target.value))}
-          style={selectStyle}
+          onValueChange={(v) => v && startTransition(() => updatePosition(profile.id, v))}
         >
-          {POSITIONS.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-        <select
+          <SelectTrigger size="sm" className="bg-secondary text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {POSITIONS.map((p) => (
+              <SelectItem key={p} value={p}>
+                {p}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
           defaultValue={profile.role}
-          onChange={(e) => startTransition(() => updateRole(profile.id, e.target.value as Role))}
-          style={selectStyle}
+          onValueChange={(v) => v && startTransition(() => updateRole(profile.id, v as Role))}
         >
-          <option value="staff">Staff</option>
-          <option value="admin">Admin</option>
-        </select>
-        <label style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", fontSize: 11, color: "var(--text-secondary)" }}>
+          <SelectTrigger size="sm" className="bg-secondary text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="staff">Staff</SelectItem>
+            <SelectItem value="manager">Manager</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+          </SelectContent>
+        </Select>
+        <Label className="ml-auto flex items-center gap-1.5 text-[11px] font-normal text-muted-foreground">
           <input
             type="checkbox"
             defaultChecked={profile.tracks_attendance}
             onChange={(e) => startTransition(() => updateTracksAttendance(profile.id, e.target.checked))}
+            className="size-3.5 accent-primary"
           />
           Attendance
-        </label>
+        </Label>
       </div>
     </div>
   );
 }
-
-function Avatar({ name }: { name: string }) {
-  return (
-    <div
-      style={{
-        width: 40,
-        height: 40,
-        borderRadius: "50%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontWeight: 700,
-        fontSize: 14,
-        color: "#fff",
-        background: "linear-gradient(135deg,#4A2A63,#E4715A)",
-        flex: "none",
-      }}
-    >
-      {name.charAt(0).toUpperCase()}
-    </div>
-  );
-}
-
-const cardStyle: React.CSSProperties = {
-  background: "var(--card-bg)",
-  border: "1px solid var(--border-subtle)",
-  borderRadius: 16,
-  padding: "12px 14px",
-  marginBottom: 10,
-};
-const ownerTagStyle: React.CSSProperties = {
-  fontSize: 10,
-  fontWeight: 700,
-  color: "var(--cream-green-fg)",
-  background: "var(--cream-green-bg)",
-  padding: "2px 7px",
-  borderRadius: 20,
-};
-const iconBtn: React.CSSProperties = {
-  width: 26,
-  height: 26,
-  borderRadius: 8,
-  background: "var(--card-bg-alt)",
-  fontSize: 11,
-  flex: "none",
-};
-const miniBtn: React.CSSProperties = {
-  fontSize: 11.5,
-  fontWeight: 700,
-  padding: "5px 12px",
-  borderRadius: 20,
-  background: "var(--card-bg-alt)",
-  border: "1px solid var(--border-subtle)",
-};
-const saveBtn: React.CSSProperties = {
-  background: "var(--accent-green)",
-  color: "#04241A",
-  fontWeight: 700,
-  fontSize: 12,
-  padding: "0 14px",
-  borderRadius: 10,
-};
-const inputStyle: React.CSSProperties = {
-  flex: 1,
-  background: "var(--card-bg-alt)",
-  border: "1px solid var(--border-subtle)",
-  borderRadius: 10,
-  padding: "8px 10px",
-  color: "var(--text-primary)",
-  fontSize: 12.5,
-};
-const selectStyle: React.CSSProperties = {
-  background: "var(--card-bg-alt)",
-  border: "1px solid var(--border-subtle)",
-  borderRadius: 10,
-  padding: "7px 9px",
-  color: "var(--text-primary)",
-  fontSize: 12,
-};

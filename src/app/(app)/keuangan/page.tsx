@@ -1,5 +1,9 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { Unit, UnitStatus } from "@/types/database";
 
 const STATUS_LABEL: Record<UnitStatus, string> = {
@@ -8,17 +12,20 @@ const STATUS_LABEL: Record<UnitStatus, string> = {
   booked: "Booked",
   sold: "Sold",
 };
+// Pastel status gradients predate shadcn and don't map onto its semantic
+// palette (primary/secondary/destructive) — kept as the same CSS custom
+// properties, applied via Tailwind's arbitrary-value syntax.
 const STATUS_BG: Record<UnitStatus, string> = {
-  progress: "var(--cream-orange-bg)",
-  ready: "var(--cream-green-bg)",
-  booked: "var(--cream-purple-bg)",
-  sold: "var(--cream-blue-bg)",
+  progress: "bg-[image:var(--cream-orange-bg)]",
+  ready: "bg-[image:var(--cream-green-bg)]",
+  booked: "bg-[image:var(--cream-purple-bg)]",
+  sold: "bg-[image:var(--cream-blue-bg)]",
 };
 const STATUS_FG: Record<UnitStatus, string> = {
-  progress: "var(--cream-orange-fg)",
-  ready: "var(--cream-green-fg)",
-  booked: "var(--cream-purple-fg)",
-  sold: "var(--cream-blue-fg)",
+  progress: "text-[var(--cream-orange-fg)]",
+  ready: "text-[var(--cream-green-fg)]",
+  booked: "text-[var(--cream-purple-fg)]",
+  sold: "text-[var(--cream-blue-fg)]",
 };
 
 // Only what this list view renders — trims the row payload versus select("*"),
@@ -43,90 +50,53 @@ export default async function KeuanganPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 18 }}>
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Finance</div>
-        <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+      <div className="mb-4 md:mb-6">
+        <h1 className="mb-1 text-xl font-extrabold md:text-2xl">Finance</h1>
+        <p className="text-sm text-muted-foreground">
           {ready} ready · {progress} in progress · {booked} booked
-        </div>
+        </p>
       </div>
 
-      <Link
-        href="/keuangan/new"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          width: "100%",
-          background: "var(--card-bg-alt)",
-          border: "1px solid var(--accent-green)",
-          color: "var(--accent-green)",
-          borderRadius: 16,
-          padding: 13,
-          fontSize: 13.5,
-          fontWeight: 700,
-          marginBottom: 14,
-        }}
+      <Button
+        variant="outline"
+        className="mb-3.5 w-full gap-2 rounded-2xl border-primary bg-secondary py-6 text-[13.5px] font-bold text-primary hover:bg-secondary/80 md:mb-5 md:w-auto"
+        render={<Link href="/keuangan/new" />}
       >
-        + Add unit
-      </Link>
+        <Plus className="size-4" />
+        Add unit
+      </Button>
 
       {list.length === 0 && (
-        <p style={{ fontSize: 13, color: "var(--text-tertiary)", textAlign: "center", padding: "20px 0" }}>
+        <p className="py-5 text-center text-sm text-muted-foreground">
           No units yet — add the first one above.
         </p>
       )}
 
-      {list.map((unit) => (
-        <Link
-          key={unit.id}
-          href={`/keuangan/${unit.id}`}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            background: "var(--card-bg)",
-            border: "1px solid var(--border-subtle)",
-            borderRadius: 18,
-            padding: 14,
-            marginBottom: 12,
-          }}
-        >
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 14,
-              flex: "none",
-              background: STATUS_BG[unit.status],
-            }}
-          />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>{unit.nama}</div>
-            <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-              {unit.plat} · {unit.tahun}
-            </div>
-            {unit.harga_jual && (
-              <div style={{ fontSize: 11.5, color: "var(--cream-green-fg)", fontWeight: 700, marginTop: 3 }}>
-                Target: Rp {unit.harga_jual.toLocaleString("id-ID")}
-              </div>
-            )}
-          </div>
-          <span
-            style={{
-              flex: "none",
-              fontSize: 11,
-              fontWeight: 700,
-              padding: "5px 10px",
-              borderRadius: 20,
-              background: STATUS_BG[unit.status],
-              color: STATUS_FG[unit.status],
-            }}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        {list.map((unit) => (
+          <Link
+            key={unit.id}
+            href={`/keuangan/${unit.id}`}
+            className="flex items-center gap-3.5 rounded-[18px] border border-border bg-card p-3.5 transition-colors hover:bg-secondary/40"
           >
-            {STATUS_LABEL[unit.status]}
-          </span>
-        </Link>
-      ))}
+            <div className={cn("size-[52px] shrink-0 rounded-[14px]", STATUS_BG[unit.status])} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-bold">{unit.nama}</div>
+              <div className="text-xs text-muted-foreground">
+                {unit.plat} · {unit.tahun}
+              </div>
+              {unit.harga_jual && (
+                <div className="mt-0.5 text-[11.5px] font-bold text-[var(--cream-green-fg)]">
+                  Target: Rp {unit.harga_jual.toLocaleString("id-ID")}
+                </div>
+              )}
+            </div>
+            <Badge className={cn("shrink-0 rounded-full px-2.5 py-1.5 text-[11px] font-bold", STATUS_BG[unit.status], STATUS_FG[unit.status])}>
+              {STATUS_LABEL[unit.status]}
+            </Badge>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

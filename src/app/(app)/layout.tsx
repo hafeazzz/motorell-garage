@@ -38,26 +38,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <ProfileProvider profile={profile}>
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          justifyContent: "center",
-          background: "#000",
-        }}
-      >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 430,
-            height: "100vh",
-            display: "flex",
-            flexDirection: "column",
-            background: "var(--bg-app)",
-          }}
-        >
+      {/* Mobile stays the original 430px phone-app shell; md+/lg+ widen the
+          same shell (still bottom-nav, no sidebar) so grids inside pages
+          have real room instead of just centering a phone-width column on
+          a big screen. */}
+      <div className="flex min-h-screen justify-center bg-background">
+        <div className="flex h-screen w-full max-w-[430px] flex-col bg-card md:max-w-2xl lg:max-w-4xl">
           <TopBar />
-          <main style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 18px 30px" }}>
+          <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 md:px-8 lg:px-10">
             {children}
           </main>
           <BottomNav />

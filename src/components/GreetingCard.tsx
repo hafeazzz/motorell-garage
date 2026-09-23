@@ -12,25 +12,13 @@ export function GreetingCard({ name }: { name: string }) {
   const period = getGreetingPeriod(now.getHours());
 
   return (
-    <div
-      style={{
-        position: "relative",
-        overflow: "hidden",
-        borderRadius: 32,
-        padding: "26px 24px",
-        marginBottom: 16,
-      }}
-    >
-      <div style={{ position: "absolute", inset: 0, background: GRADIENTS[period.key] }} />
-      <div style={{ position: "relative", fontSize: 13, color: "rgba(255,255,255,0.75)", marginBottom: 10 }}>
-        {formatFullDate(now)}
-      </div>
-      <h1 style={{ position: "relative", fontSize: 28, fontWeight: 800, margin: "0 0 8px", lineHeight: 1.15 }}>
+    <div className="relative mb-4 overflow-hidden rounded-[32px] px-6 py-6 md:mb-5 md:px-9 md:py-9">
+      <div className="absolute inset-0" style={{ background: GRADIENTS[period.key] }} />
+      <div className="relative mb-2.5 text-[13px] text-white/75">{formatFullDate(now)}</div>
+      <h1 className="relative mb-2 text-[28px] leading-[1.15] font-extrabold text-white md:text-[34px]">
         {period.label}
       </h1>
-      <p style={{ position: "relative", fontSize: 15, color: "rgba(255,255,255,0.72)", fontWeight: 500, margin: 0 }}>
-        {name}
-      </p>
+      <p className="relative text-[15px] font-medium text-white/72">{name}</p>
     </div>
   );
 }

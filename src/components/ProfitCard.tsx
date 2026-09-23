@@ -3,6 +3,9 @@
 import { useState, useTransition } from "react";
 import { setMonthlyTarget } from "@/app/(app)/actions";
 import { rupiah } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export function ProfitCard({ netProfit, monthlyTarget }: { netProfit: number; monthlyTarget: number }) {
   const [isPending, startTransition] = useTransition();
@@ -12,78 +15,39 @@ export function ProfitCard({ netProfit, monthlyTarget }: { netProfit: number; mo
   const pct = monthlyTarget > 0 ? Math.min(100, Math.round((netProfit / monthlyTarget) * 100)) : 0;
 
   return (
-    <div
-      style={{
-        background: "var(--card-bg)",
-        border: "1px solid var(--border-subtle)",
-        borderRadius: 20,
-        padding: 20,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-start justify-between">
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>Profit</div>
-          <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>This month</div>
+          <div className="text-[15px] font-bold">Profit</div>
+          <div className="text-xs text-muted-foreground">This month</div>
         </div>
-        <div
-          style={{
-            background: "var(--cream-green-bg)",
-            color: "var(--cream-green-fg)",
-            fontSize: 12,
-            fontWeight: 600,
-            padding: "5px 10px",
-            borderRadius: 20,
-          }}
-        >
+        <Badge className="rounded-full bg-[image:var(--cream-green-bg)] px-2.5 py-1.5 text-xs font-semibold text-[var(--cream-green-fg)]">
           {pct}% of target
-        </div>
+        </Badge>
       </div>
 
-      <div
-        style={{
-          position: "relative",
-          width: "100%",
-          height: 12,
-          borderRadius: 20,
-          background: "rgba(255,255,255,0.07)",
-          overflow: "hidden",
-          marginTop: 18,
-        }}
-      >
+      <div className="relative mt-4.5 h-3 overflow-hidden rounded-full bg-white/[0.07]">
         <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: `${pct}%`,
-            borderRadius: 20,
-            background: "linear-gradient(90deg,#1FAE7A,#33D399)",
-            transition: "width 1.2s var(--ease-out-expo)",
-          }}
+          className="absolute inset-0 rounded-full transition-[width] duration-1000 ease-[var(--ease-out-expo)]"
+          style={{ width: `${pct}%`, background: "linear-gradient(90deg,#1FAE7A,#33D399)" }}
         />
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12, fontSize: 12, color: "var(--text-secondary)" }}>
+      <div className="mt-3 flex justify-between text-xs text-muted-foreground">
         <span>Net</span>
         <span>Monthly target ({rupiah(monthlyTarget)})</span>
       </div>
 
       {showInput ? (
-        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <input
+        <div className="mt-3.5 flex gap-2">
+          <Input
             type="number"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            style={{
-              flex: 1,
-              background: "var(--card-bg-alt)",
-              border: "1px solid var(--border-subtle)",
-              borderRadius: 12,
-              padding: "9px 12px",
-              color: "var(--text-primary)",
-              fontSize: 13,
-            }}
+            className="h-9 flex-1 bg-secondary text-[13px]"
           />
-          <button
+          <Button
+            size="sm"
             disabled={isPending}
             onClick={() =>
               startTransition(async () => {
@@ -91,28 +55,14 @@ export function ProfitCard({ netProfit, monthlyTarget }: { netProfit: number; mo
                 setShowInput(false);
               })
             }
-            style={{
-              background: "var(--accent-green)",
-              color: "#04241A",
-              fontWeight: 700,
-              fontSize: 12.5,
-              padding: "0 14px",
-              borderRadius: 12,
-            }}
           >
             Save
-          </button>
+          </Button>
         </div>
       ) : (
         <button
           onClick={() => setShowInput(true)}
-          style={{
-            display: "block",
-            margin: "12px auto 0",
-            color: "var(--text-tertiary)",
-            fontSize: 11.5,
-            fontWeight: 600,
-          }}
+          className="mx-auto mt-3 block text-[11.5px] font-semibold text-muted-foreground"
         >
           Set monthly target
         </button>
