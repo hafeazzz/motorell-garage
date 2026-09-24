@@ -38,12 +38,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <ProfileProvider profile={profile}>
-      {/* Mobile (<768px): fullscreen, edge-to-edge. md+/lg+: centered shell
-          widening in steps (still bottom-nav, no sidebar) so grids inside
-          pages have real room instead of just centering a phone-width
-          column on a big screen. */}
+      {/* Fullscreen, edge-to-edge at every breakpoint — no sidebar, still
+          bottom-nav. */}
       <div className="flex min-h-screen justify-center bg-background">
-        <div className="flex h-screen w-full flex-col bg-card md:max-w-2xl md:mx-auto lg:max-w-4xl lg:mx-auto">
+        <div className="flex h-screen w-full flex-col bg-card">
           <TopBar />
           <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 sm:px-6 md:px-8 lg:px-10">
             {children}
