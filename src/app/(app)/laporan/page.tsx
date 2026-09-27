@@ -110,7 +110,7 @@ export default async function LaporanPage() {
               {withProfit.map(({ unit }) => (
                 <Link
                   key={unit.id}
-                  href={`/keuangan/${unit.id}`}
+                  href={`/inventori/${unit.id}`}
                   prefetch
                   className="flex items-center gap-3.5 rounded-[18px] border border-border bg-card p-3.5 transition-colors hover:bg-secondary/40"
                 >
@@ -132,7 +132,7 @@ export default async function LaporanPage() {
       </div>
 
       <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">
-        Tap a sold unit to keep editing it — it opens the same Finance detail
+        Tap a sold unit to keep editing it — it opens the same Inventori detail
         page. Month-to-month archiving runs from the monthly-reset cron job.
       </p>
     </div>

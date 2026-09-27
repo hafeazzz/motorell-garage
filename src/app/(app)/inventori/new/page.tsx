@@ -1,19 +1,26 @@
 import { createUnit } from "../actions";
 import { todayIso } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function NewUnitPage() {
   return (
     <div>
-      <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 18 }}>Add unit</div>
-      <form action={createUnit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <h1 className="mb-4.5 text-xl font-extrabold">Add unit</h1>
+      <form action={createUnit} className="flex flex-col gap-3">
         <Field label="Model name" name="nama" required />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Year" name="tahun" type="number" defaultValue={String(new Date().getFullYear())} />
           <Field label="Odometer" name="odometer" placeholder="e.g. 5,000 km" />
           <Field label="Plate number" name="plat" placeholder="e.g. B 1234 ABC" />
           <div>
-            <label style={fieldLabel}>Status</label>
-            <select name="status" defaultValue="progress" style={fieldInput}>
+            <Label className="mb-1.5 text-xs text-muted-foreground">Status</Label>
+            <select
+              name="status"
+              defaultValue="progress"
+              className="h-9 w-full rounded-lg border border-input bg-secondary px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
               <option value="progress">In Progress</option>
               <option value="ready">Ready</option>
               <option value="booked">Booked</option>
@@ -24,21 +31,9 @@ export default function NewUnitPage() {
         <Field label="Purchase cost (Rp)" name="modal_beli" type="number" required />
         <Field label="Date acquired" name="tgl_masuk" type="date" defaultValue={todayIso()} />
 
-        <button
-          type="submit"
-          style={{
-            width: "100%",
-            background: "var(--accent-green)",
-            color: "#04241A",
-            fontWeight: 700,
-            fontSize: 13,
-            padding: 12,
-            borderRadius: 12,
-            marginTop: 4,
-          }}
-        >
+        <Button type="submit" className="mt-1 w-full">
           Create unit
-        </button>
+        </Button>
       </form>
     </div>
   );
@@ -61,32 +56,18 @@ function Field({
 }) {
   return (
     <div>
-      <label style={fieldLabel}>{label}</label>
-      <input
+      <Label htmlFor={name} className="mb-1.5 text-xs text-muted-foreground">
+        {label}
+      </Label>
+      <Input
+        id={name}
         name={name}
         type={type}
         required={required}
         defaultValue={defaultValue}
         placeholder={placeholder}
-        style={fieldInput}
+        className="bg-secondary text-sm"
       />
     </div>
   );
 }
-
-const fieldLabel: React.CSSProperties = {
-  display: "block",
-  fontSize: 11,
-  color: "var(--text-secondary)",
-  marginBottom: 5,
-};
-
-const fieldInput: React.CSSProperties = {
-  width: "100%",
-  background: "var(--card-bg-alt)",
-  border: "1px solid var(--border-subtle)",
-  borderRadius: 12,
-  padding: "10px 12px",
-  color: "var(--text-primary)",
-  fontSize: 13,
-};

@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Clock, Wallet, FileBarChart, Users } from "lucide-react";
+import { Home, Clock, Package, FileBarChart, Users } from "lucide-react";
 import { useProfile } from "@/lib/profile-context";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/", label: "Home", icon: Home },
   { href: "/absen", label: "Attendance", icon: Clock },
-  { href: "/keuangan", label: "Finance", icon: Wallet },
+  { href: "/inventori", label: "Inventori", icon: Package },
   { href: "/laporan", label: "Report", icon: FileBarChart },
 ];
 

@@ -1,6 +1,6 @@
 import { SkeletonPageHeader, SkeletonBlock, SkeletonRows } from "@/components/Skeleton";
 
-export default function KeuanganLoading() {
+export default function InventoriLoading() {
   return (
     <div>
       <SkeletonPageHeader />

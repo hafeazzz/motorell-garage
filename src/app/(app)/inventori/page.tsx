@@ -31,9 +31,9 @@ const STATUS_FG: Record<UnitStatus, string> = {
 // Only what this list view renders — trims the row payload versus select("*"),
 // which also pulled odometer/finance_code/booking_nominal/photo_url/timestamps
 // that never reach the page.
-type KeuanganUnit = Pick<Unit, "id" | "nama" | "tahun" | "plat" | "status" | "harga_jual" | "tgl_masuk">;
+type InventoriUnit = Pick<Unit, "id" | "nama" | "tahun" | "plat" | "status" | "harga_jual" | "tgl_masuk">;
 
-export default async function KeuanganPage() {
+export default async function InventoriPage() {
   const supabase = await createClient();
   const { data: units } = await supabase
     .from("units")
@@ -41,7 +41,7 @@ export default async function KeuanganPage() {
     .neq("status", "sold")
     .order("tgl_masuk", { ascending: false })
     .limit(200)
-    .returns<KeuanganUnit[]>();
+    .returns<InventoriUnit[]>();
 
   const list = units ?? [];
   const ready = list.filter((u) => u.status === "ready").length;
@@ -51,7 +51,7 @@ export default async function KeuanganPage() {
   return (
     <div>
       <div className="mb-4 sm:mb-5 md:mb-6">
-        <h1 className="mb-1 text-xl font-extrabold sm:text-[22px] md:text-2xl">Finance</h1>
+        <h1 className="mb-1 text-xl font-extrabold sm:text-[22px] md:text-2xl">Inventori</h1>
         <p className="text-sm text-muted-foreground">
           {ready} ready · {progress} in progress · {booked} booked
         </p>
@@ -60,7 +60,7 @@ export default async function KeuanganPage() {
       <Button
         variant="outline"
         className="mb-3.5 w-full gap-2 rounded-2xl border-primary bg-secondary py-6 text-[13.5px] font-bold text-primary hover:bg-secondary/80 md:mb-5 md:w-auto"
-        render={<Link href="/keuangan/new" />}
+        render={<Link href="/inventori/new" />}
       >
         <Plus className="size-4" />
         Add unit
@@ -76,7 +76,7 @@ export default async function KeuanganPage() {
         {list.map((unit) => (
           <Link
             key={unit.id}
-            href={`/keuangan/${unit.id}`}
+            href={`/inventori/${unit.id}`}
             prefetch
             className="flex items-center gap-3.5 rounded-[18px] border border-border bg-card p-3.5 transition-colors hover:bg-secondary/40"
           >

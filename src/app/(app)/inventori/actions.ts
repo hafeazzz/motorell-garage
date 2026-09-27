@@ -3,10 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth-utils";
 import { todayIso } from "@/lib/utils";
 import type { UnitStatus } from "@/types/database";
 
 export async function createUnit(formData: FormData) {
+  await requireAdmin();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("units")
@@ -24,23 +26,33 @@ export async function createUnit(formData: FormData) {
 
   if (error) throw new Error(error.message);
 
-  revalidatePath("/keuangan");
-  redirect(`/keuangan/${data.id}`);
+  revalidatePath("/inventori");
+  redirect(`/inventori/${data.id}`);
 }
 
 export async function updateUnit(unitId: number, formData: FormData) {
+  await requireAdmin();
   const supabase = await createClient();
   const status = String(formData.get("status")) as UnitStatus;
 
   const update: Record<string, unknown> = {
+    nama: String(formData.get("nama") || "").trim(),
     tahun: Number(formData.get("tahun")),
     odometer: String(formData.get("odometer") || ""),
-    plat: String(formData.get("plat") || ""),
+    plat: String(formData.get("plat") || "").trim(),
     status,
+    modal_beli: Number(formData.get("modal_beli")) || 0,
     harga_jual: formData.get("harga_jual") ? Number(formData.get("harga_jual")) : null,
     finance_code: String(formData.get("finance_code") || "") || null,
     updated_at: new Date().toISOString(),
   };
+
+  // Only touch photo_url if the form actually included the field — the
+  // hidden input always carries the current value (existing URL, freshly
+  // uploaded one, or empty if cleared), so this never silently wipes a
+  // photo that wasn't part of a particular submission.
+  const photoUrl = formData.get("photo_url");
+  if (photoUrl !== null) update.photo_url = String(photoUrl) || null;
 
   if (status === "booked") {
     update.booking_nominal = Number(formData.get("booking_nominal")) || 0;
@@ -52,14 +64,29 @@ export async function updateUnit(unitId: number, formData: FormData) {
   const { error } = await supabase.from("units").update(update).eq("id", unitId);
   if (error) throw new Error(error.message);
 
-  revalidatePath("/keuangan");
-  revalidatePath(`/keuangan/${unitId}`);
+  revalidatePath("/inventori");
+  revalidatePath(`/inventori/${unitId}`);
   revalidatePath("/laporan");
   revalidatePath("/");
 
   if (status === "sold") {
     redirect("/laporan");
   }
+}
+
+export async function deleteUnit(unitId: number) {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  // unit_expenses.unit_id has `on delete cascade` (see supabase/schema.sql),
+  // so its rows for this unit are removed automatically — no manual cleanup.
+  const { error } = await supabase.from("units").delete().eq("id", unitId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/inventori");
+  revalidatePath("/laporan");
+  revalidatePath("/");
+  redirect("/inventori");
 }
 
 export async function addExpense(unitId: number, formData: FormData) {
@@ -72,7 +99,7 @@ export async function addExpense(unitId: number, formData: FormData) {
   });
   if (error) throw new Error(error.message);
 
-  revalidatePath(`/keuangan/${unitId}`);
+  revalidatePath(`/inventori/${unitId}`);
 }
 
 export async function deleteExpense(unitId: number, expenseId: number) {
@@ -80,5 +107,5 @@ export async function deleteExpense(unitId: number, expenseId: number) {
   const { error } = await supabase.from("unit_expenses").delete().eq("id", expenseId);
   if (error) throw new Error(error.message);
 
-  revalidatePath(`/keuangan/${unitId}`);
+  revalidatePath(`/inventori/${unitId}`);
 }

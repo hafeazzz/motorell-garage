@@ -4,10 +4,10 @@ import { canAccessFinancials, isAdminOrAbove } from "@/types/database";
 import type { Profile } from "@/types/database";
 
 // Route prefixes gated by role, checked in order — first match wins.
-// /keuangan and /laporan: owner/admin/manager. /team: owner/admin only.
+// /inventori and /laporan: owner/admin/manager. /team: owner/admin only.
 const ROLE_GATES: { prefix: string; allowed: (profile: Pick<Profile, "role" | "is_owner">) => boolean }[] = [
   { prefix: "/team", allowed: isAdminOrAbove },
-  { prefix: "/keuangan", allowed: canAccessFinancials },
+  { prefix: "/inventori", allowed: canAccessFinancials },
   { prefix: "/laporan", allowed: canAccessFinancials },
 ];
 
