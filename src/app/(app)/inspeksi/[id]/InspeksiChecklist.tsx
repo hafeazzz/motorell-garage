@@ -8,6 +8,7 @@ import { setItem, saveNotes, finishInspection } from "../actions";
 import { createClient } from "@/lib/supabase/client";
 import { INSPEKSI_SECTIONS, INS_STATUS, INS_TOTAL } from "@/lib/inspection";
 import { Button } from "@/components/ui/button";
+import { DecisionModal } from "./DecisionModal";
 import { cn } from "@/lib/utils";
 import type { InspectionItemStatus } from "@/types/database";
 
@@ -22,10 +23,12 @@ const keyOf = (section: string, item: string) => `${section}:${item}`;
 
 export function InspeksiChecklist({
   inspectionId,
+  nama,
   initialItems,
   initialNotes,
 }: {
   inspectionId: number;
+  nama: string;
   initialItems: Record<string, ItemState>;
   initialNotes: string;
 }) {
@@ -34,6 +37,8 @@ export function InspeksiChecklist({
   const [notes, setNotes] = useState(initialNotes);
   const [openSec, setOpenSec] = useState("A");
   const [uploading, setUploading] = useState<string | null>(null);
+  const [finished, setFinished] = useState(false);
+  const [decisionOpen, setDecisionOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const photoRef = useRef<HTMLInputElement>(null);
   const photoFor = useRef<{ section: string; item: string } | null>(null);
@@ -89,15 +94,19 @@ export function InspeksiChecklist({
     }
   }
 
+  // Finish, then go straight into the Beli / Tidak decision. The page is not
+  // re-rendered here (that would swap in the read-only view and unmount this
+  // modal); it only refreshes if the modal is dismissed without deciding,
+  // which leaves the inspection "Pending" with a Putuskan button.
   function finish() {
     startTransition(async () => {
       try {
         await saveNotes(inspectionId, notes);
         await finishInspection(inspectionId);
-        toast.success("Inspection finished — waiting for the owner/admin's decision.");
-        router.refresh();
+        setFinished(true);
+        setDecisionOpen(true);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Couldn't finish.");
+        toast.error(err instanceof Error ? err.message : "Gagal menyelesaikan inspeksi.");
       }
     });
   }
@@ -209,9 +218,19 @@ export function InspeksiChecklist({
         />
       </div>
 
-      <Button className="mt-4 w-full" disabled={isPending || checked === 0} onClick={finish}>
-        {isPending ? "Finishing…" : "Finish inspection"}
+      <Button className="mt-4 w-full" disabled={isPending || finished || checked === 0} onClick={finish}>
+        {isPending ? "Menyimpan…" : "Selesai Inspeksi"}
       </Button>
+
+      <DecisionModal
+        inspectionId={inspectionId}
+        nama={nama}
+        open={decisionOpen}
+        onOpenChange={(o) => {
+          setDecisionOpen(o);
+          if (!o && finished) router.refresh();
+        }}
+      />
     </div>
   );
 }

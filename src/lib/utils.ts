@@ -94,3 +94,11 @@ export function jakartaPeriodKey(date: Date): string {
 export function jakartaDateIso(date: Date): string {
   return new Date(date.getTime() + JAKARTA_OFFSET_MS).toISOString().slice(0, 10);
 }
+
+/** ISO timestamp -> "24 September 2026, 14:05" in WIB, independent of server/browser timezone. */
+export function formatDateTimeJakarta(iso: string): string {
+  const shifted = new Date(new Date(iso).getTime() + JAKARTA_OFFSET_MS);
+  const hh = String(shifted.getUTCHours()).padStart(2, "0");
+  const mm = String(shifted.getUTCMinutes()).padStart(2, "0");
+  return `${shifted.getUTCDate()} ${MONTHS[shifted.getUTCMonth()]} ${shifted.getUTCFullYear()}, ${hh}:${mm}`;
+}

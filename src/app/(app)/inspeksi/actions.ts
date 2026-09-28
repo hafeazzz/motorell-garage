@@ -3,14 +3,47 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getCurrentProfile, requireAdmin } from "@/lib/auth-utils";
 import { isKnownItem } from "@/lib/inspection";
 import { jakartaDateIso } from "@/lib/utils";
-import type { Inspection, InspectionItemStatus } from "@/types/database";
+import { canAccessFinancials, isAdminOrAbove } from "@/types/database";
+import type {
+  Inspection,
+  InspectionHistoryAction,
+  InspectionItemStatus,
+  Profile,
+} from "@/types/database";
 
-// Pre-purchase inspection, modelled on MotorellOps. Who can do what is
-// enforced twice: here, and by RLS in schema-phase3.sql (inspector edits
-// only while 'draft'; owner/admin decide).
+// Pre-purchase inspection, modelled on MotorellOps. Flow:
+//   draft (inspector fills the checklist; everyone can watch live)
+//   -> selesai (inspector finishes)
+//   -> beli (price entered, unit created in Inventori) | tidak.
+// The purchase price is asked only at the "beli" step, not up front.
+
+/**
+ * Append-only audit trail. Written with the service role because the table
+ * has no client write policies (entries can't be forged from the browser).
+ * A failed log write is reported but never blocks the action itself.
+ */
+async function logHistory(entry: {
+  inspection: Pick<Inspection, "id" | "nama">;
+  action: InspectionHistoryAction;
+  actor: Pick<Profile, "id" | "name">;
+  decidedAction?: "beli" | "tidak";
+  notes?: string;
+}) {
+  const { error } = await createServiceRoleClient().from("inspection_history").insert({
+    inspection_id: entry.inspection.id,
+    inspection_nama: entry.inspection.nama,
+    action: entry.action,
+    decided_action: entry.decidedAction ?? null,
+    actor_id: entry.actor.id,
+    actor_name: entry.actor.name,
+    notes: entry.notes ?? null,
+  });
+  if (error) console.error("inspection_history insert failed", error);
+}
 
 export async function createInspection(formData: FormData) {
   const profile = await getCurrentProfile();
@@ -18,17 +51,17 @@ export async function createInspection(formData: FormData) {
   if (nama.length < 3) throw new Error("Model name must be at least 3 characters.");
 
   const tahun = Number(formData.get("tahun")) || null;
-  const hargaBeli = Number(formData.get("harga_beli")) || null;
   const plat = String(formData.get("plat") || "").trim() || null;
 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("inspections")
-    .insert({ inspector_id: profile.id, nama, tahun, plat, harga_beli: hargaBeli })
-    .select("id")
+    .insert({ inspector_id: profile.id, nama, tahun, plat })
+    .select("id, nama")
     .single();
   if (error) throw new Error(error.message);
 
+  await logHistory({ inspection: data, action: "created", actor: profile });
   revalidatePath("/inspeksi");
   redirect(`/inspeksi/${data.id}`);
 }
@@ -70,8 +103,13 @@ export async function saveNotes(inspectionId: number, notes: string) {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * draft -> selesai. Deliberately does NOT revalidate this inspection's own
+ * page: the checklist opens the decision modal right after this returns, and
+ * a server re-render would swap the page to the read-only view and unmount it.
+ */
 export async function finishInspection(inspectionId: number) {
-  await getCurrentProfile();
+  const profile = await getCurrentProfile();
   const supabase = await createClient();
 
   const { count } = await supabase
@@ -81,20 +119,37 @@ export async function finishInspection(inspectionId: number) {
     .not("status", "is", null);
   if (!count) throw new Error("Check at least one item before finishing.");
 
-  const { error } = await supabase
+  const { data: ins, error } = await supabase
     .from("inspections")
     .update({ status: "selesai", updated_at: new Date().toISOString() })
     .eq("id", inspectionId)
-    .eq("status", "draft");
-  if (error) throw new Error(error.message);
+    .eq("status", "draft")
+    .select("id, nama")
+    .single();
+  if (error || !ins) throw new Error("This inspection was already finished.");
 
+  await logHistory({ inspection: ins, action: "completed", actor: profile });
   revalidatePath("/inspeksi");
-  revalidatePath(`/inspeksi/${inspectionId}`);
 }
 
-/** Owner/admin only. "beli" creates the unit in Inventori and links it. */
-export async function decideInspection(inspectionId: number, decision: "beli" | "tidak") {
-  await requireAdmin();
+export type DecisionResult = { decision: "beli" | "tidak"; unitId: number | null; redirectTo: string };
+
+/**
+ * The inspector (or an owner/admin) decides. "beli" needs the purchase price
+ * and creates the unit in Inventori from the inspection's own name/year/plate.
+ *
+ * Units are owner/admin-write-only in RLS (Phase 2), so the insert runs with
+ * the service role — but only after checking here that the caller is this
+ * inspection's inspector or an owner/admin, and that it's finished and
+ * undecided. The decision is claimed first with a conditional update, so a
+ * double-click can't create two units.
+ */
+export async function decideInspection(
+  inspectionId: number,
+  decision: "beli" | "tidak",
+  price?: number
+): Promise<DecisionResult> {
+  const profile = await getCurrentProfile();
   const supabase = await createClient();
 
   const { data: ins } = await supabase
@@ -102,50 +157,92 @@ export async function decideInspection(inspectionId: number, decision: "beli" | 
     .select("*")
     .eq("id", inspectionId)
     .single<Inspection>();
-  if (!ins) throw new Error("Inspection not found.");
-  if (ins.status === "beli" || ins.status === "tidak") throw new Error("Already decided.");
+  if (!ins || ins.is_deleted) throw new Error("Inspection not found.");
+  if (ins.inspector_id !== profile.id && !isAdminOrAbove(profile)) {
+    throw new Error("Only the inspector or an owner/admin can decide this.");
+  }
+  if (ins.status !== "selesai") throw new Error("Finish the inspection first, or it was already decided.");
+
+  if (decision === "beli" && !(Number.isFinite(price) && (price as number) > 0)) {
+    throw new Error("Harga dibeli harus lebih dari 0.");
+  }
+
+  const admin = createServiceRoleClient();
+  const now = new Date().toISOString();
+
+  const { data: claimed } = await admin
+    .from("inspections")
+    .update({
+      status: decision,
+      harga_beli: decision === "beli" ? price : null,
+      decided_at: now,
+      updated_at: now,
+    })
+    .eq("id", inspectionId)
+    .eq("status", "selesai")
+    .select("id");
+  if (!claimed?.length) throw new Error("Already decided.");
 
   let unitId: number | null = null;
   if (decision === "beli") {
     const today = jakartaDateIso(new Date());
-    const { data: unit, error: unitError } = await supabase
+    const { data: unit, error: unitError } = await admin
       .from("units")
       .insert({
         nama: ins.nama,
         tahun: ins.tahun ?? Number(today.slice(0, 4)),
         plat: ins.plat ?? "-",
-        modal_beli: ins.harga_beli ?? 0,
+        modal_beli: price,
         status: "progress",
         tgl_masuk: today,
       })
       .select("id")
       .single();
-    if (unitError) throw new Error(unitError.message);
+    if (unitError || !unit) {
+      // Undo the claim so it can be retried instead of being stuck "beli" with no unit.
+      await admin
+        .from("inspections")
+        .update({ status: "selesai", harga_beli: null, decided_at: null })
+        .eq("id", inspectionId);
+      throw new Error(unitError?.message ?? "Couldn't create the unit.");
+    }
     unitId = unit.id;
+    await admin.from("inspections").update({ unit_id: unitId }).eq("id", inspectionId);
   }
 
-  const { error } = await supabase
-    .from("inspections")
-    .update({
-      status: decision,
-      unit_id: unitId,
-      decided_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", inspectionId);
-  if (error) throw new Error(error.message);
+  await logHistory({
+    inspection: ins,
+    action: "decided",
+    actor: profile,
+    decidedAction: decision,
+    notes: decision === "beli" ? `Harga dibeli Rp ${Math.round(price as number).toLocaleString("id-ID")}` : undefined,
+  });
 
   revalidatePath("/inspeksi");
-  revalidatePath("/inventori");
-  redirect(unitId ? `/inventori/${unitId}` : "/inspeksi");
+  revalidatePath(`/inspeksi/${inspectionId}`);
+  if (unitId) revalidatePath("/inventori");
+
+  // Staff can't open Inventori (proxy.ts gates it to owner/admin/manager),
+  // so they go back to the inspection list instead of a page that would bounce them.
+  const redirectTo = unitId && canAccessFinancials(profile) ? `/inventori/${unitId}` : "/inspeksi";
+  return { decision, unitId, redirectTo };
 }
 
+/** Owner/admin only. Soft delete: the row and its history are kept. */
 export async function deleteInspection(inspectionId: number) {
-  await requireAdmin();
+  const profile = await requireAdmin();
   const supabase = await createClient();
-  const { error } = await supabase.from("inspections").delete().eq("id", inspectionId);
-  if (error) throw new Error(error.message);
 
+  const { data: ins, error } = await supabase
+    .from("inspections")
+    .update({ is_deleted: true, updated_at: new Date().toISOString() })
+    .eq("id", inspectionId)
+    .eq("is_deleted", false)
+    .select("id, nama")
+    .single();
+  if (error || !ins) throw new Error("Inspection not found or already deleted.");
+
+  await logHistory({ inspection: ins, action: "deleted", actor: profile });
   revalidatePath("/inspeksi");
-  redirect("/inspeksi");
+  revalidatePath(`/inspeksi/${inspectionId}`);
 }

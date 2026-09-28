@@ -146,8 +146,23 @@ export interface Inspection {
   status: InspectionStatus;
   unit_id: number | null;
   decided_at: string | null;
+  is_deleted: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export type InspectionHistoryAction = "created" | "completed" | "decided" | "deleted";
+
+export interface InspectionHistoryEntry {
+  id: number;
+  inspection_id: number | null;
+  inspection_nama: string;
+  action: InspectionHistoryAction;
+  decided_action: "beli" | "tidak" | null;
+  actor_id: string | null;
+  actor_name: string | null;
+  notes: string | null;
+  created_at: string;
 }
 
 export interface InspectionItem {

@@ -16,12 +16,12 @@ type NavItem = {
 };
 
 // Tabs are filtered by role so nobody sees a tab that proxy.ts would just
-// bounce them away from. Owner/admin/manager reach Inspeksi from the
-// Inventori page; staff (who can't open Inventori) get it as a tab.
+// bounce them away from. Inspeksi is open to everyone signed in — mechanics
+// do the inspecting and the whole team can watch it live.
 const ITEMS: NavItem[] = [
   { href: "/", label: "Home", icon: Home, visible: () => true },
   { href: "/absen", label: "Attendance", icon: Clock, visible: () => true },
-  { href: "/inspeksi", label: "Inspeksi", icon: ClipboardCheck, visible: (p) => !canAccessFinancials(p) },
+  { href: "/inspeksi", label: "Inspeksi", icon: ClipboardCheck, visible: () => true },
   { href: "/inventori", label: "Inventori", icon: Package, visible: canAccessFinancials },
   { href: "/finance", label: "Finance", icon: Wallet, visible: canAccessFinancials },
   { href: "/laporan", label: "Report", icon: FileBarChart, visible: canAccessFinancials },
@@ -45,7 +45,7 @@ export function BottomNav() {
             href={item.href}
             prefetch
             className={cn(
-              "flex flex-1 flex-col items-center gap-1 px-0.5 py-1 text-[11px] transition-colors md:flex-none md:px-3",
+              "flex min-w-0 flex-1 flex-col items-center gap-1 px-0.5 py-1 text-[10px] transition-colors sm:text-[11px] md:flex-none md:px-3",
               active ? "text-foreground" : "text-muted-foreground"
             )}
           >

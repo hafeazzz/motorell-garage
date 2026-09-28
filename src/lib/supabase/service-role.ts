@@ -1,11 +1,11 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 // SERVICE ROLE client — bypasses Row Level Security entirely.
-// Only ever import this inside a Route Handler that itself checks
-// CRON_SECRET (see src/app/api/cron/monthly-reset/route.ts). Never
-// import this into a Client Component or anything the browser can
-// reach — SUPABASE_SERVICE_ROLE_KEY must stay a server-only env var
-// (no NEXT_PUBLIC_ prefix).
+// Server-only: import it from Route Handlers and Server Actions, never from
+// a Client Component, and only AFTER the caller has been authorized (the
+// cron route checks CRON_SECRET; team and inspeksi actions check the
+// signed-in user's role/ownership first). SUPABASE_SERVICE_ROLE_KEY must stay
+// a server-only env var (no NEXT_PUBLIC_ prefix).
 export function createServiceRoleClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

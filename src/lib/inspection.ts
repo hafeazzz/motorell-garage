@@ -1,4 +1,4 @@
-import type { InspectionItemStatus, InspectionStatus } from "@/types/database";
+import type { InspectionHistoryAction, InspectionItemStatus, InspectionStatus } from "@/types/database";
 
 // Copied from MotorellOps' INSPEKSI_SECTIONS / INS_STATUS so both apps
 // inspect the same things. 58 items across 6 sections.
@@ -23,17 +23,27 @@ export function isKnownItem(section: string, item: string): boolean {
   return INSPEKSI_SECTIONS.some((s) => s.key === section && s.items.includes(item));
 }
 
+// Indonesian labels, matching MotorellOps. draft and selesai are both
+// "not decided yet" to the business, but staff need to tell them apart:
+// draft is being filled in right now (and can be watched live).
 export const INSPECTION_STATUS_LABEL: Record<InspectionStatus, string> = {
-  draft: "In progress",
-  selesai: "Awaiting decision",
-  beli: "Bought",
-  tidak: "Passed on",
+  draft: "Berlangsung",
+  selesai: "Pending",
+  beli: "Beli",
+  tidak: "Tidak dibeli",
 };
 
-// Same pastel token pairs the unit status badges use.
+// Same pastel token pairs the unit status badges use; tidak is red.
 export const INSPECTION_STATUS_STYLE: Record<InspectionStatus, string> = {
   draft: "bg-[image:var(--cream-orange-bg)] text-[var(--cream-orange-fg)]",
-  selesai: "bg-[image:var(--cream-blue-bg)] text-[var(--cream-blue-fg)]",
+  selesai: "bg-[image:var(--cream-purple-bg)] text-[var(--cream-purple-fg)]",
   beli: "bg-[image:var(--cream-green-bg)] text-[var(--cream-green-fg)]",
-  tidak: "bg-white/[0.06] text-muted-foreground",
+  tidak: "bg-destructive/20 text-destructive",
+};
+
+export const HISTORY_ACTION_LABEL: Record<InspectionHistoryAction, string> = {
+  created: "Inspeksi dimulai",
+  completed: "Inspeksi selesai",
+  decided: "Keputusan",
+  deleted: "Inspeksi dihapus",
 };
