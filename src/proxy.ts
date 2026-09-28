@@ -1,12 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { canAccessFinancials, isAdminOrAbove } from "@/types/database";
+import { canAccessFinancials, isAdminOrAbove, isOwner } from "@/types/database";
 import type { Profile } from "@/types/database";
 
 // Route prefixes gated by role, checked in order — first match wins.
-// /inventori and /laporan: owner/admin/manager. /team: owner/admin only.
+// /inventori, /finance and /laporan: owner/admin/manager. /team: owner/admin
+// only. /finance/investor-payouts: owner only. /inspeksi is open to everyone
+// signed in (mechanics do the inspecting).
 const ROLE_GATES: { prefix: string; allowed: (profile: Pick<Profile, "role" | "is_owner">) => boolean }[] = [
   { prefix: "/team", allowed: isAdminOrAbove },
+  // Must stay above "/finance" — first match wins.
+  { prefix: "/finance/investor-payouts", allowed: isOwner },
+  { prefix: "/finance", allowed: canAccessFinancials },
   { prefix: "/inventori", allowed: canAccessFinancials },
   { prefix: "/laporan", allowed: canAccessFinancials },
 ];

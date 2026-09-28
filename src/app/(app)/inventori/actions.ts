@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth-utils";
+import { syncInvestorPayouts } from "@/lib/investors";
 import { todayIso } from "@/lib/utils";
 import type { UnitStatus } from "@/types/database";
 
@@ -64,9 +65,13 @@ export async function updateUnit(unitId: number, formData: FormData) {
   const { error } = await supabase.from("units").update(update).eq("id", unitId);
   if (error) throw new Error(error.message);
 
+  // Sale (or a price/status change) can create, refresh or drop investor payouts.
+  await syncInvestorPayouts(supabase, unitId);
+
   revalidatePath("/inventori");
   revalidatePath(`/inventori/${unitId}`);
   revalidatePath("/laporan");
+  revalidatePath("/finance");
   revalidatePath("/");
 
   if (status === "sold") {
@@ -99,6 +104,7 @@ export async function addExpense(unitId: number, formData: FormData) {
   });
   if (error) throw new Error(error.message);
 
+  await syncInvestorPayouts(supabase, unitId);
   revalidatePath(`/inventori/${unitId}`);
 }
 
@@ -107,5 +113,47 @@ export async function deleteExpense(unitId: number, expenseId: number) {
   const { error } = await supabase.from("unit_expenses").delete().eq("id", expenseId);
   if (error) throw new Error(error.message);
 
+  await syncInvestorPayouts(supabase, unitId);
   revalidatePath(`/inventori/${unitId}`);
+}
+
+export async function addInvestor(unitId: number, formData: FormData) {
+  await requireAdmin();
+  const name = String(formData.get("investor_name") || "").trim();
+  const share = Number(formData.get("share_percentage"));
+  if (!name) throw new Error("Investor name is required.");
+  if (!(share > 0 && share <= 100)) throw new Error("Share must be between 0 and 100%.");
+
+  const supabase = await createClient();
+  const { data: current, error: readError } = await supabase
+    .from("unit_investors")
+    .select("share_percentage")
+    .eq("unit_id", unitId);
+  if (readError) throw new Error(readError.message);
+  const allocated = (current ?? []).reduce((s, i) => s + Number(i.share_percentage), 0);
+  if (allocated + share > 100) {
+    throw new Error(`Only ${100 - allocated}% is left to allocate on this unit.`);
+  }
+
+  const { error } = await supabase
+    .from("unit_investors")
+    .insert({ unit_id: unitId, investor_name: name, share_percentage: share });
+  if (error) {
+    throw new Error(error.code === "23505" ? `${name} is already an investor on this unit.` : error.message);
+  }
+
+  await syncInvestorPayouts(supabase, unitId);
+  revalidatePath(`/inventori/${unitId}`);
+  revalidatePath("/finance");
+}
+
+export async function removeInvestor(unitId: number, investorId: number) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from("unit_investors").delete().eq("id", investorId);
+  if (error) throw new Error(error.message);
+
+  await syncInvestorPayouts(supabase, unitId);
+  revalidatePath(`/inventori/${unitId}`);
+  revalidatePath("/finance");
 }

@@ -2,22 +2,37 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Clock, Package, FileBarChart, Users } from "lucide-react";
+import { Home, Clock, Package, FileBarChart, Users, Wallet, ClipboardCheck } from "lucide-react";
 import { useProfile } from "@/lib/profile-context";
 import { cn } from "@/lib/utils";
+import { canAccessFinancials } from "@/types/database";
+import type { Profile } from "@/types/database";
 
-const ITEMS = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/absen", label: "Attendance", icon: Clock },
-  { href: "/inventori", label: "Inventori", icon: Package },
-  { href: "/laporan", label: "Report", icon: FileBarChart },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof Home;
+  visible: (p: Pick<Profile, "role" | "is_owner">) => boolean;
+};
+
+// Tabs are filtered by role so nobody sees a tab that proxy.ts would just
+// bounce them away from. Owner/admin/manager reach Inspeksi from the
+// Inventori page; staff (who can't open Inventori) get it as a tab.
+const ITEMS: NavItem[] = [
+  { href: "/", label: "Home", icon: Home, visible: () => true },
+  { href: "/absen", label: "Attendance", icon: Clock, visible: () => true },
+  { href: "/inspeksi", label: "Inspeksi", icon: ClipboardCheck, visible: (p) => !canAccessFinancials(p) },
+  { href: "/inventori", label: "Inventori", icon: Package, visible: canAccessFinancials },
+  { href: "/finance", label: "Finance", icon: Wallet, visible: canAccessFinancials },
+  { href: "/laporan", label: "Report", icon: FileBarChart, visible: canAccessFinancials },
+  { href: "/team", label: "Team", icon: Users, visible: (p) => p.is_owner },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
   const profile = useProfile();
 
-  const items = profile.is_owner ? [...ITEMS, { href: "/team", label: "Team", icon: Users }] : ITEMS;
+  const items = ITEMS.filter((i) => i.visible(profile));
 
   return (
     <nav className="flex flex-none justify-between gap-1 border-t border-border bg-[#0A0A0D] px-2.5 pt-3 pb-4 sm:px-6 md:justify-center md:gap-8 lg:gap-12">

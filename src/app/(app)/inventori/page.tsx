@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { ClipboardCheck, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,14 +57,24 @@ export default async function InventoriPage() {
         </p>
       </div>
 
-      <Button
-        variant="outline"
-        className="mb-3.5 w-full gap-2 rounded-2xl border-primary bg-secondary py-6 text-[13.5px] font-bold text-primary hover:bg-secondary/80 md:mb-5 md:w-auto"
-        render={<Link href="/inventori/new" />}
-      >
-        <Plus className="size-4" />
-        Add unit
-      </Button>
+      <div className="mb-3.5 flex flex-col gap-2 md:mb-5 md:flex-row">
+        <Button
+          variant="outline"
+          className="w-full gap-2 rounded-2xl border-primary bg-secondary py-6 text-[13.5px] font-bold text-primary hover:bg-secondary/80 md:w-auto"
+          render={<Link href="/inventori/new" />}
+        >
+          <Plus className="size-4" />
+          Add unit
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full gap-2 rounded-2xl bg-secondary py-6 text-[13.5px] font-bold md:w-auto"
+          render={<Link href="/inspeksi" />}
+        >
+          <ClipboardCheck className="size-4" />
+          Inspeksi
+        </Button>
+      </div>
 
       {list.length === 0 && (
         <p className="py-5 text-center text-sm text-muted-foreground">

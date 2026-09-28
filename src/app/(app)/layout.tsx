@@ -40,8 +40,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <ProfileProvider profile={profile}>
       {/* Fullscreen, edge-to-edge at every breakpoint — no sidebar, still
           bottom-nav. */}
-      <div className="flex min-h-screen justify-center bg-background">
-        <div className="flex h-screen w-full flex-col bg-card">
+      {/* h-dvh, not h-screen: on mobile browsers 100vh is taller than the
+          visible viewport (URL bar), which made the whole shell — TopBar
+          included — scroll with the page. The shell is now exactly the
+          visible height and only <main> scrolls. */}
+      <div className="flex h-dvh justify-center overflow-hidden bg-background">
+        <div className="flex h-dvh w-full flex-col bg-card">
           <TopBar />
           <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 sm:px-6 md:px-8 lg:px-10">
             {children}

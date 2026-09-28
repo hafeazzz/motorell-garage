@@ -84,3 +84,13 @@ export function formatFullDateJakarta(date: Date): string {
   const p = jakartaParts(date);
   return `${DAYS[p.dayOfWeek]}, ${p.date} ${MONTHS[p.month]}`;
 }
+
+/** Indonesia (WIB) calendar month key, e.g. "2026-09" — independent of server timezone. */
+export function jakartaPeriodKey(date: Date): string {
+  return jakartaDateIso(date).slice(0, 7);
+}
+
+/** Indonesia (WIB) calendar date "YYYY-MM-DD" — independent of server timezone. */
+export function jakartaDateIso(date: Date): string {
+  return new Date(date.getTime() + JAKARTA_OFFSET_MS).toISOString().slice(0, 10);
+}

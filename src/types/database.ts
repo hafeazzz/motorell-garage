@@ -129,3 +129,58 @@ export function unitProfit(
 ): number {
   return (unit.harga_jual ?? 0) - unitTotalModal(unit, expenses);
 }
+
+// ---------- Phase 3: inspections + investors (see supabase/schema-phase3.sql) ----------
+export type InspectionStatus = "draft" | "selesai" | "beli" | "tidak";
+export type InspectionItemStatus = "baik" | "perhatian" | "masalah";
+export type PayoutStatus = "pending" | "paid";
+
+export interface Inspection {
+  id: number;
+  inspector_id: string | null;
+  nama: string;
+  tahun: number | null;
+  plat: string | null;
+  harga_beli: number | null;
+  notes: string | null;
+  status: InspectionStatus;
+  unit_id: number | null;
+  decided_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InspectionItem {
+  id: number;
+  inspection_id: number;
+  section: string;
+  item_name: string;
+  status: InspectionItemStatus | null;
+  photo_url: string | null;
+  checked_at: string;
+}
+
+export interface UnitInvestor {
+  id: number;
+  unit_id: number;
+  investor_name: string;
+  share_percentage: number;
+  created_at: string;
+}
+
+export interface InvestorPayout {
+  id: number;
+  unit_id: number | null;
+  unit_nama: string;
+  unit_plat: string | null;
+  investor_name: string;
+  share_percentage: number;
+  sale_price: number;
+  modal_total: number;
+  profit: number;
+  payout_amount: number;
+  status: PayoutStatus;
+  payment_date: string | null;
+  notes: string | null;
+  created_at: string;
+}
