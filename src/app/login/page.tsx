@@ -28,8 +28,11 @@ export default function LoginPage() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        // 100dvh, not 100vh — on mobile browsers 100vh is taller than the
+        // visible viewport (URL bar), which pushed content below the fold.
+        height: "100dvh",
         display: "flex",
+        alignItems: "center",
         justifyContent: "center",
         background: "#000",
       }}
@@ -38,6 +41,8 @@ export default function LoginPage() {
         style={{
           width: "100%",
           maxWidth: 430,
+          maxHeight: "100%",
+          overflowY: "auto",
           background: "var(--bg-app)",
           padding: "64px 28px 40px",
         }}

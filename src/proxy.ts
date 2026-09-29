@@ -23,6 +23,19 @@ const ROLE_GATES: { prefix: string; allowed: (profile: Pick<Profile, "role" | "i
 // /login if there's no signed-in user trying to reach a page under the
 // (app) group.
 export async function proxy(request: NextRequest) {
+  // Temporary diagnostic timing (remove once you're done diagnosing). Next's
+  // own dev server already prints a per-request "proxy.ts: Nms" breakdown in
+  // the terminal; this adds a finer split — getUser() is the actual network
+  // round-trip to Supabase Auth, the rest is synchronous.
+  const start = performance.now();
+  const result = await run(request);
+  console.log(
+    `[proxy] ${request.nextUrl.pathname} total=${(performance.now() - start).toFixed(0)}ms auth=${result.authElapsed.toFixed(0)}ms`
+  );
+  return result.response;
+}
+
+async function run(request: NextRequest): Promise<{ response: NextResponse; authElapsed: number }> {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -44,22 +57,24 @@ export async function proxy(request: NextRequest) {
     }
   );
 
+  const authStart = performance.now();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const authElapsed = performance.now() - authStart;
 
   const isLoginPage = request.nextUrl.pathname.startsWith("/login");
 
   if (!user && !isLoginPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    return { response: NextResponse.redirect(url), authElapsed };
   }
 
   if (user && isLoginPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
-    return NextResponse.redirect(url);
+    return { response: NextResponse.redirect(url), authElapsed };
   }
 
   const gate = user && ROLE_GATES.find((g) => request.nextUrl.pathname.startsWith(g.prefix));
@@ -74,11 +89,11 @@ export async function proxy(request: NextRequest) {
     if (!profile || !gate.allowed(profile)) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
-      return NextResponse.redirect(url);
+      return { response: NextResponse.redirect(url), authElapsed };
     }
   }
 
-  return response;
+  return { response, authElapsed };
 }
 
 export const config = {
