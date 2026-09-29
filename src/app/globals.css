@@ -76,14 +76,21 @@ body {
 }
 
 /* Reset for the many hand-styled <button>s not yet converted to shadcn's
-   <Button> in this pass — shadcn's own Button sets its own bg/border via
-   Tailwind utility classes, which still win over this bare-element rule. */
-button {
-  font-family: inherit;
-  border: none;
-  background: none;
-  color: inherit;
-  cursor: pointer;
+   <Button>. This MUST be inside @layer base: Tailwind v4's utilities
+   (bg-primary, border-*, etc.) live in a named cascade layer, and per the
+   CSS Cascade Layers spec, any unlayered rule beats ANY layered rule
+   regardless of specificity or source order. An unlayered `button { ... }`
+   here silently wins over every shadcn <Button>'s bg-primary/border classes
+   — which is exactly what happened (a fully transparent, backgroundless
+   "Sign in" button) until this was moved into the layer. */
+@layer base {
+  button {
+    font-family: inherit;
+    border: none;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
 }
 
 a {

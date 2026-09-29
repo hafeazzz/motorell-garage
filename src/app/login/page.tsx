@@ -3,6 +3,9 @@
 import { Suspense, useActionState } from "react";
 import { useSearchParams } from "next/navigation";
 import { signIn, type SignInState } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const URL_ERROR_MESSAGES: Record<string, string> = {
   "no-profile":
@@ -17,7 +20,7 @@ function UrlError() {
   const searchParams = useSearchParams();
   const urlError = URL_ERROR_MESSAGES[searchParams.get("error") ?? ""];
   if (!urlError) return null;
-  return <p style={{ color: "#E7B183", fontSize: 13, margin: 0 }}>{urlError}</p>;
+  return <p className="m-0 text-[13px] text-destructive">{urlError}</p>;
 }
 
 export default function LoginPage() {
@@ -26,115 +29,79 @@ export default function LoginPage() {
   });
 
   return (
-    <div
-      style={{
-        // 100dvh, not 100vh — on mobile browsers 100vh is taller than the
-        // visible viewport (URL bar), which pushed content below the fold.
-        height: "100dvh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#000",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 430,
-          maxHeight: "100%",
-          overflowY: "auto",
-          background: "var(--bg-app)",
-          padding: "64px 28px 40px",
-        }}
-      >
-        <div
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: 18,
-            background: "linear-gradient(135deg,#4A2A63,#E4715A)",
-            margin: "0 auto 18px",
-          }}
-        />
-        <h1 style={{ textAlign: "center", fontSize: 22, fontWeight: 800, margin: 0 }}>
-          Motorell <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>Garage</span>
-        </h1>
-        <p
-          style={{
-            textAlign: "center",
-            fontSize: 13,
-            color: "var(--text-secondary)",
-            marginTop: 8,
-            marginBottom: 40,
-          }}
-        >
-          Internal tools for the garage team
-        </p>
+    <div className="flex min-h-dvh w-full items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-4 size-16 rounded-2xl bg-[linear-gradient(135deg,#4A2A63,#E4715A)]" />
+          <h1 className="text-2xl font-extrabold">
+            Motorell <span className="font-semibold text-muted-foreground">Garage</span>
+          </h1>
+          <p className="mt-2 text-[13px] text-muted-foreground">Internal tools for the garage team</p>
+        </div>
 
-        <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <form action={formAction} className="flex flex-col gap-4">
           <div>
-            <label style={fieldLabel}>Email</label>
-            <input name="email" type="email" required autoComplete="email" style={fieldInput} />
+            <Label htmlFor="email" className="mb-1.5 text-xs text-muted-foreground">
+              Email
+            </Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="your@email.com"
+              className="autofill-fix h-11 bg-secondary text-sm"
+            />
           </div>
           <div>
-            <label style={fieldLabel}>Password</label>
-            <input
+            <Label htmlFor="password" className="mb-1.5 text-xs text-muted-foreground">
+              Password
+            </Label>
+            <Input
+              id="password"
               name="password"
               type="password"
               required
               autoComplete="current-password"
-              style={fieldInput}
+              placeholder="••••••••"
+              className="autofill-fix h-11 bg-secondary text-sm"
             />
           </div>
 
           {state?.error ? (
-            <p style={{ color: "#E7B183", fontSize: 13, margin: 0 }}>{state.error}</p>
+            <p className="m-0 text-[13px] text-destructive">{state.error}</p>
           ) : (
             <Suspense fallback={null}>
               <UrlError />
             </Suspense>
           )}
 
-          <button
-            type="submit"
-            disabled={pending}
-            style={{
-              marginTop: 8,
-              background: "var(--accent-green)",
-              color: "#04241A",
-              fontWeight: 700,
-              fontSize: 14,
-              padding: 14,
-              borderRadius: 16,
-              opacity: pending ? 0.7 : 1,
-            }}
-          >
+          <Button type="submit" disabled={pending} className="mt-2 w-full py-6 text-sm font-bold active:scale-[0.98]">
             {pending ? "Signing in…" : "Sign in"}
-          </button>
+          </Button>
         </form>
 
-        <p style={{ textAlign: "center", fontSize: 12, color: "var(--text-tertiary)", marginTop: 24 }}>
-          Accounts are created by the owner from the Team page — there's no
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          Accounts are created by the owner from the Team page — there&apos;s no
           self-signup. Ask the owner if you don&apos;t have credentials yet.
         </p>
       </div>
+
+      {/* Chrome/Safari fill autofilled inputs with a yellow background that
+          ignores normal CSS — only the -webkit-box-shadow inset trick
+          reliably overrides it. Tailwind's autofill: variant (the :autofill
+          standard pseudo-class) doesn't catch this in every browser, so both
+          are here as belt-and-suspenders. */}
+      <style>{`
+        .autofill-fix:-webkit-autofill,
+        .autofill-fix:-webkit-autofill:hover,
+        .autofill-fix:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0 1000px var(--card-bg-alt) inset !important;
+          -webkit-text-fill-color: var(--text-primary) !important;
+          caret-color: var(--text-primary) !important;
+        }
+      `}</style>
     </div>
   );
 }
-
-const fieldLabel: React.CSSProperties = {
-  display: "block",
-  fontSize: 11,
-  color: "var(--text-secondary)",
-  marginBottom: 5,
-};
-
-const fieldInput: React.CSSProperties = {
-  width: "100%",
-  background: "var(--card-bg-alt)",
-  border: "1px solid var(--border-subtle)",
-  borderRadius: 12,
-  padding: "10px 12px",
-  color: "var(--text-primary)",
-  fontSize: 14,
-};
