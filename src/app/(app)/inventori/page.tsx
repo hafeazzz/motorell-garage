@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardCheck, Plus } from "lucide-react";
+import { Archive, ClipboardCheck, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +73,14 @@ export default async function InventoriPage() {
         >
           <ClipboardCheck className="size-4" />
           Inspeksi
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full gap-2 rounded-2xl bg-secondary py-6 text-[13.5px] font-bold md:w-auto"
+          render={<Link href="/inventori/arsip" />}
+        >
+          <Archive className="size-4" />
+          Arsip
         </Button>
       </div>
 

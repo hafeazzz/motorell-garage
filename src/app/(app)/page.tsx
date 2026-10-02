@@ -3,6 +3,7 @@ import { GreetingCard } from "@/components/GreetingCard";
 import { ProfitCard } from "@/components/ProfitCard";
 import { TaskList } from "@/components/TaskList";
 import { unitProfit } from "@/types/database";
+import { jakartaPeriodKey } from "@/lib/utils";
 import type { Profile, Unit, UnitExpense, Task } from "@/types/database";
 
 export default async function HomePage() {
@@ -26,14 +27,22 @@ export default async function HomePage() {
     .returns<Task[]>();
 
   const readyCount = (units ?? []).filter((u) => u.status === "ready").length;
-  const soldCount = (units ?? []).filter((u) => u.status === "sold").length;
+  // "This month" = sold in the current WIB calendar month. The live units
+  // table also holds units sold in earlier months until the monthly cron
+  // archives them, so counting every status="sold" row overstated both the
+  // sold count and the profit below.
+  const thisMonth = jakartaPeriodKey(new Date());
+  const soldThisMonth = (units ?? []).filter(
+    (u) => u.status === "sold" && u.tanggal_jual?.startsWith(thisMonth)
+  );
+  const soldCount = soldThisMonth.length;
 
   const isAdmin = profile?.role === "admin";
   let netProfit = 0;
   let monthlyTarget = 25_000_000;
 
   if (isAdmin) {
-    const soldUnits = (units ?? []).filter((u) => u.status === "sold");
+    const soldUnits = soldThisMonth;
     if (soldUnits.length > 0) {
       const { data: expenses } = await supabase
         .from("unit_expenses")
