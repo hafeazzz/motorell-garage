@@ -22,7 +22,8 @@ export function TopBar() {
   return (
     <div className="sticky top-0 z-40 flex shrink-0 items-center justify-between border-b border-border bg-card px-4 pt-5 pb-4 sm:px-6 md:px-8 md:pt-7 lg:px-10">
       <div className="flex items-center gap-2.5">
-        <div className="size-9 rounded-[11px] bg-[linear-gradient(135deg,#4A2A63,#E4715A)]" />
+        {/* eslint-disable-next-line @next/next/no-img-element -- tiny static logo, same plain <img> approach as the rest of the app */}
+        <img src="/logo.png" alt="Motorell" className="size-9 rounded-[11px]" />
         <div className="flex flex-col leading-[1.15]">
           <span className="text-[15px] font-extrabold">Motorell</span>
           <span className="text-[11px] font-semibold text-muted-foreground">Garage</span>

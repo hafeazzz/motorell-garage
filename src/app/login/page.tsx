@@ -32,7 +32,8 @@ export default function LoginPage() {
     <div className="flex min-h-dvh w-full items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-4 size-16 rounded-2xl bg-[linear-gradient(135deg,#4A2A63,#E4715A)]" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Motorell" className="mx-auto mb-4 size-16 rounded-2xl" />
           <h1 className="text-2xl font-extrabold">
             Motorell <span className="font-semibold text-muted-foreground">Garage</span>
           </h1>
