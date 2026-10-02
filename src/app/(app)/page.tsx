@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { GreetingCard } from "@/components/GreetingCard";
 import { ProfitCard } from "@/components/ProfitCard";
 import { TaskList } from "@/components/TaskList";
-import { unitProfit } from "@/types/database";
+import { isAdminOrAbove, unitProfit } from "@/types/database";
 import { jakartaPeriodKey } from "@/lib/utils";
 import type { Profile, Unit, UnitExpense, Task } from "@/types/database";
 
@@ -37,7 +37,7 @@ export default async function HomePage() {
   );
   const soldCount = soldThisMonth.length;
 
-  const isAdmin = profile?.role === "admin";
+  const isAdmin = !!profile && isAdminOrAbove(profile);
   let netProfit = 0;
   let monthlyTarget = 25_000_000;
 

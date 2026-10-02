@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { rupiah, formatDateStr, formatPeriodLabel, jakartaDateIso, jakartaPeriodKey } from "@/lib/utils";
 import { monthToDateCashflow } from "@/lib/finance";
 import { CashflowChartLazy } from "./CashflowChartLazy";
-import { unitTotalModal, unitProfit, canAccessFinancials, isOwner } from "@/types/database";
+import { unitTotalModal, unitProfit, isAdminOrAbove, isOwner } from "@/types/database";
 import type { Profile, Unit, UnitExpense } from "@/types/database";
 
 // Narrowed row shapes — only the fields this page actually reads out of
@@ -31,7 +32,9 @@ export default async function LaporanPage() {
       .limit(200)
       .returns<LaporanUnit[]>(),
   ]);
-  const canSeeProfit = !!profile && canAccessFinancials(profile);
+  // proxy.ts already gates /laporan to owner/admin; this is the server-side backstop.
+  if (!profile || !isAdminOrAbove(profile)) redirect("/");
+  const canSeeProfit = true;
 
   // Month boundaries in WIB — the server runs in UTC, which would flip the
   // month 7 hours early.

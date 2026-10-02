@@ -21,7 +21,7 @@ export function isAdminOrAbove(profile: Pick<Profile, "role" | "is_owner">): boo
   return isOwner(profile) || ROLE_RANK[profile.role] <= ROLE_RANK.admin;
 }
 
-/** Owner, admin, or manager — the roles allowed into /inventori and /laporan. */
+/** Owner, admin, or manager — the roles allowed into /inventori. */
 export function canAccessFinancials(profile: Pick<Profile, "role" | "is_owner">): boolean {
   return isOwner(profile) || ROLE_RANK[profile.role] <= ROLE_RANK.manager;
 }

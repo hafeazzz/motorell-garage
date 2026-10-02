@@ -4,6 +4,7 @@ import { CheckInCard } from "./CheckInCard";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { isAdminOrAbove } from "@/types/database";
 import type { Attendance, AttendanceStatus, Profile } from "@/types/database";
 
 type AbsenProfile = Pick<Profile, "name" | "is_owner" | "tracks_attendance" | "role" | "position">;
@@ -45,7 +46,8 @@ export default async function AbsenPage() {
 
   let roster: RosterProfile[] = [];
   let attendanceToday: RosterAttendance[] = [];
-  if (profile?.role === "admin") {
+  const canSeeTeam = !!profile && isAdminOrAbove(profile);
+  if (canSeeTeam) {
     // These two are also independent of each other — fetched in parallel.
     const [{ data: allProfiles }, { data: allAttendance }] = await Promise.all([
       supabase
@@ -92,9 +94,9 @@ export default async function AbsenPage() {
         )}
       </div>
 
-      {profile?.role === "admin" && (
+      {canSeeTeam && (
         <div>
-          <div className="mb-3 text-xs text-muted-foreground">Only admins can see this summary.</div>
+          <div className="mb-3 text-xs text-muted-foreground">Hanya owner dan admin yang bisa melihat rekap ini.</div>
           <div className="mb-3 text-sm font-bold">Today&apos;s Team Attendance</div>
           <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
             {roster.map((person) => {

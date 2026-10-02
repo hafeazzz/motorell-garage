@@ -4,16 +4,16 @@ import { canAccessFinancials, isAdminOrAbove, isOwner } from "@/types/database";
 import type { Profile } from "@/types/database";
 
 // Route prefixes gated by role, checked in order — first match wins.
-// /inventori, /finance and /laporan: owner/admin/manager. /team: owner/admin
-// only. /finance/investor-payouts: owner only. /inspeksi is open to everyone
+// /inventori: owner/admin/manager. /laporan (financial report), /finance and
+// /team: owner/admin only. /finance/investor-payouts: owner only. /inspeksi is open to everyone
 // signed in (mechanics do the inspecting).
 const ROLE_GATES: { prefix: string; allowed: (profile: Pick<Profile, "role" | "is_owner">) => boolean }[] = [
   { prefix: "/team", allowed: isAdminOrAbove },
   // Must stay above "/finance" — first match wins.
   { prefix: "/finance/investor-payouts", allowed: isOwner },
-  { prefix: "/finance", allowed: canAccessFinancials },
+  { prefix: "/finance", allowed: isAdminOrAbove },
   { prefix: "/inventori", allowed: canAccessFinancials },
-  { prefix: "/laporan", allowed: canAccessFinancials },
+  { prefix: "/laporan", allowed: isAdminOrAbove },
 ];
 
 // Next.js 16 renamed the "middleware" file convention to "proxy" (same

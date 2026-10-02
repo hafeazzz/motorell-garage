@@ -7,11 +7,12 @@ import { toggleTaskStatus, addTask, deleteTask } from "@/app/(app)/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { isAdminOrAbove } from "@/types/database";
 import type { Task } from "@/types/database";
 
 export function TaskList({ tasks }: { tasks: Task[] }) {
   const profile = useProfile();
-  const isAdmin = profile.role === "admin";
+  const isAdmin = isAdminOrAbove(profile);
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
