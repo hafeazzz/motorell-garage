@@ -13,7 +13,7 @@ import type { InvestorPayout } from "@/types/database";
 export default async function InvestorPayoutsPage() {
   // proxy.ts gates this path to the owner; this is the server-side backstop.
   const profile = await getCurrentProfile();
-  if (!isOwner(profile)) redirect("/finance");
+  if (!isOwner(profile)) redirect("/laporan");
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -32,7 +32,7 @@ export default async function InvestorPayoutsPage() {
   return (
     <div>
       <div className="mb-4 flex items-center gap-3">
-        <Link href="/finance" className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-card">
+        <Link href="/laporan" className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-card">
           <ArrowLeft className="size-4" />
         </Link>
         <div>

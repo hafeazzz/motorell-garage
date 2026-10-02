@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { rupiah, formatDateStr, formatMonthYear, periodKey } from "@/lib/utils";
-import { unitTotalModal, unitProfit, canAccessFinancials } from "@/types/database";
+import { rupiah, formatDateStr, formatPeriodLabel, jakartaDateIso, jakartaPeriodKey } from "@/lib/utils";
+import { monthToDateCashflow } from "@/lib/finance";
+import { CashflowChartLazy } from "./CashflowChartLazy";
+import { unitTotalModal, unitProfit, canAccessFinancials, isOwner } from "@/types/database";
 import type { Profile, Unit, UnitExpense } from "@/types/database";
 
 // Narrowed row shapes — only the fields this page actually reads out of
@@ -31,8 +33,12 @@ export default async function LaporanPage() {
   ]);
   const canSeeProfit = !!profile && canAccessFinancials(profile);
 
+  // Month boundaries in WIB — the server runs in UTC, which would flip the
+  // month 7 hours early.
   const now = new Date();
-  const thisMonth = periodKey(now);
+  const thisMonth = jakartaPeriodKey(now);
+  const today = jakartaDateIso(now);
+  const monthStart = `${thisMonth}-01`;
 
   // Filter to units sold in the current calendar month (older sold units
   // stay in `units` here in the scaffold — port the monthly-reset cron's
@@ -47,6 +53,32 @@ export default async function LaporanPage() {
         .in("unit_id", thisMonthSold.map((u) => u.id))
         .returns<LaporanExpense[]>()
     : { data: [] as LaporanExpense[] };
+
+  // Cashflow inputs: units bought this month (cash out) and every expense
+  // logged this month, including on units not sold yet.
+  const [{ data: purchases }, { data: monthExpenses }] = await Promise.all([
+    supabase
+      .from("units")
+      .select("modal_beli, tgl_masuk")
+      .gte("tgl_masuk", monthStart)
+      .limit(500)
+      .returns<{ modal_beli: number; tgl_masuk: string }[]>(),
+    supabase
+      .from("unit_expenses")
+      .select("nominal, tanggal")
+      .gte("tanggal", monthStart)
+      .limit(1000)
+      .returns<{ nominal: number; tanggal: string }[]>(),
+  ]);
+  const cashflow = monthToDateCashflow({
+    monthStart,
+    today,
+    sales: thisMonthSold.map((u) => ({ date: u.tanggal_jual!, amount: u.harga_jual ?? 0 })),
+    purchases: (purchases ?? []).map((p) => ({ date: p.tgl_masuk, amount: p.modal_beli })),
+    expenses: (monthExpenses ?? []).map((e) => ({ date: e.tanggal, amount: e.nominal })),
+  });
+  const cashIn = cashflow.at(-1)?.in ?? 0;
+  const cashOut = cashflow.at(-1)?.out ?? 0;
 
   const withProfit = thisMonthSold
     .map((u) => {
@@ -63,7 +95,7 @@ export default async function LaporanPage() {
     <div>
       <div className="mb-4 sm:mb-5 md:mb-6">
         <h1 className="mb-1 text-xl font-extrabold sm:text-[22px] md:text-2xl">Monthly Report</h1>
-        <p className="text-sm text-muted-foreground">{formatMonthYear(now)}</p>
+        <p className="text-sm text-muted-foreground">{formatPeriodLabel(thisMonth)}</p>
       </div>
 
       <div className="mb-3.5 rounded-3xl border border-border bg-card px-5 py-5 text-center sm:px-6 sm:py-6 md:mb-5">
@@ -130,6 +162,39 @@ export default async function LaporanPage() {
           </div>
         )}
       </div>
+
+      <div className="mt-3.5 rounded-2xl border border-border bg-card p-4 md:mt-5">
+        <div className="mb-1 text-[13px] font-bold">Cashflow</div>
+        <div className="mb-3 text-[11px] text-muted-foreground">
+          Month to date · cumulative cash in vs out (actuals, not a forecast)
+        </div>
+        <div className="mb-3 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <div className="text-sm font-extrabold text-primary">{rupiah(cashIn)}</div>
+            <div className="text-[11px] text-muted-foreground">In</div>
+          </div>
+          <div>
+            <div className="text-sm font-extrabold text-[#E7B183]">{rupiah(cashOut)}</div>
+            <div className="text-[11px] text-muted-foreground">Out</div>
+          </div>
+          <div>
+            <div className={`text-sm font-extrabold ${cashIn - cashOut < 0 ? "text-destructive" : ""}`}>
+              {rupiah(cashIn - cashOut)}
+            </div>
+            <div className="text-[11px] text-muted-foreground">Net</div>
+          </div>
+        </div>
+        <CashflowChartLazy cashflow={cashflow} />
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          In = sale prices. Out = purchase costs (on the day a unit came in) plus unit expenses.
+        </p>
+      </div>
+
+      {profile && isOwner(profile) && (
+        <Link href="/finance/investor-payouts" className="mt-3.5 block text-center text-xs font-semibold text-primary underline">
+          Investor payouts
+        </Link>
+      )}
 
       <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">
         Tap a sold unit to keep editing it — it opens the same Inventori detail

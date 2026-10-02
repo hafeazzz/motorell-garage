@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Clock, Package, FileBarChart, Users, Wallet, ClipboardCheck } from "lucide-react";
+import { Home, Clock, Package, FileBarChart, Users, ClipboardCheck } from "lucide-react";
 import { useProfile } from "@/lib/profile-context";
 import { cn } from "@/lib/utils";
 import { canAccessFinancials } from "@/types/database";
@@ -23,7 +23,6 @@ const ITEMS: NavItem[] = [
   { href: "/absen", label: "Attendance", icon: Clock, visible: () => true },
   { href: "/inspeksi", label: "Inspeksi", icon: ClipboardCheck, visible: () => true },
   { href: "/inventori", label: "Inventori", icon: Package, visible: canAccessFinancials },
-  { href: "/finance", label: "Finance", icon: Wallet, visible: canAccessFinancials },
   { href: "/laporan", label: "Report", icon: FileBarChart, visible: canAccessFinancials },
   { href: "/team", label: "Team", icon: Users, visible: (p) => p.is_owner },
 ];
