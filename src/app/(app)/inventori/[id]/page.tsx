@@ -3,43 +3,37 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { rupiah, formatDateStr } from "@/lib/utils";
-import { unitTotalModal } from "@/types/database";
+import { getMyProfile } from "@/lib/session";
+import { isAdminOrAbove, unitTotalModal } from "@/types/database";
 import { ExpenseList } from "./ExpenseList";
 import { UnitActions } from "./UnitActions";
 import { UnitInvestors } from "./UnitInvestors";
-import type { InvestorPayout, Profile, Unit, UnitExpense, UnitInvestor } from "@/types/database";
+import type { InvestorPayout, Unit, UnitExpense, UnitInvestor } from "@/types/database";
 
 export default async function UnitDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, is_owner")
-    .eq("id", user!.id)
-    .single<Pick<Profile, "role" | "is_owner">>();
+  const unitId = Number(id);
+
+  // Profile (per-request cache), the unit and its expenses only need the
+  // id from the URL — one parallel round trip.
+  const [profile, { data: unit }, { data: expenses }] = await Promise.all([
+    getMyProfile(),
+    supabase.from("units").select("*").eq("id", unitId).maybeSingle<Unit>(),
+    supabase
+      .from("unit_expenses")
+      .select("*")
+      .eq("unit_id", unitId)
+      .order("tanggal", { ascending: false })
+      .returns<UnitExpense[]>(),
+  ]);
   // Edit/Delete are owner/admin-only server-side (see actions.ts's
   // requireAdmin() calls) — this just hides the buttons for everyone else
   // rather than showing controls that would fail when clicked.
-  const canManage = !!profile && (profile.is_owner || profile.role === "admin");
-
-  const { data: unit } = await supabase
-    .from("units")
-    .select("*")
-    .eq("id", Number(id))
-    .single<Unit>();
+  const canManage = !!profile && isAdminOrAbove(profile);
 
   if (!unit) notFound();
-
-  const { data: expenses } = await supabase
-    .from("unit_expenses")
-    .select("*")
-    .eq("unit_id", unit.id)
-    .order("tanggal", { ascending: false })
-    .returns<UnitExpense[]>();
 
   const totalModal = unitTotalModal(unit, expenses ?? []);
 
@@ -62,7 +56,7 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
       <div className="mb-4.5 flex items-center gap-3">
         <Link
           href="/inventori"
-          className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-card"
+          className="pressable flex size-9 shrink-0 items-center justify-center rounded-xl bg-card"
         >
           <ArrowLeft className="size-4" />
         </Link>

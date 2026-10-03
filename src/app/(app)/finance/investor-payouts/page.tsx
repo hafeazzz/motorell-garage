@@ -32,7 +32,7 @@ export default async function InvestorPayoutsPage() {
   return (
     <div>
       <div className="mb-4 flex items-center gap-3">
-        <Link href="/laporan" className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-card">
+        <Link href="/laporan" className="pressable flex size-9 shrink-0 items-center justify-center rounded-xl bg-card">
           <ArrowLeft className="size-4" />
         </Link>
         <div>

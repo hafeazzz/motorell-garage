@@ -1,30 +1,24 @@
 import { createClient } from "@/lib/supabase/server";
+import { getMyProfile } from "@/lib/session";
 import { GreetingCard } from "@/components/GreetingCard";
 import { ProfitCard } from "@/components/ProfitCard";
 import { TaskList } from "@/components/TaskList";
 import { isAdminOrAbove, unitProfit } from "@/types/database";
 import { jakartaPeriodKey } from "@/lib/utils";
-import type { Profile, Unit, UnitExpense, Task } from "@/types/database";
+import type { Unit, UnitExpense, Task } from "@/types/database";
 
 export default async function HomePage() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user!.id)
-    .single<Profile>();
-
-  const { data: units } = await supabase.from("units").select("*").returns<Unit[]>();
-  const { data: tasks } = await supabase
-    .from("tasks")
-    .select("*")
-    .order("created_at")
-    .returns<Task[]>();
+  // Profile comes from the layout's per-request cache; units, tasks and the
+  // target setting don't depend on each other, so they're one parallel
+  // round trip instead of four sequential ones.
+  const [profile, { data: units }, { data: tasks }, { data: targetSetting }] = await Promise.all([
+    getMyProfile(),
+    supabase.from("units").select("*").returns<Unit[]>(),
+    supabase.from("tasks").select("*").order("created_at").returns<Task[]>(),
+    supabase.from("settings").select("value").eq("key", "monthly_target").maybeSingle(),
+  ]);
 
   const readyCount = (units ?? []).filter((u) => u.status === "ready").length;
   // "This month" = sold in the current WIB calendar month. The live units
@@ -59,11 +53,6 @@ export default async function HomePage() {
       }, 0);
     }
 
-    const { data: targetSetting } = await supabase
-      .from("settings")
-      .select("value")
-      .eq("key", "monthly_target")
-      .single();
     if (targetSetting) monthlyTarget = Number(targetSetting.value);
   }
 

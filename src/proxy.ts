@@ -23,19 +23,6 @@ const ROLE_GATES: { prefix: string; allowed: (profile: Pick<Profile, "role" | "i
 // /login if there's no signed-in user trying to reach a page under the
 // (app) group.
 export async function proxy(request: NextRequest) {
-  // Temporary diagnostic timing (remove once you're done diagnosing). Next's
-  // own dev server already prints a per-request "proxy.ts: Nms" breakdown in
-  // the terminal; this adds a finer split — getUser() is the actual network
-  // round-trip to Supabase Auth, the rest is synchronous.
-  const start = performance.now();
-  const result = await run(request);
-  console.log(
-    `[proxy] ${request.nextUrl.pathname} total=${(performance.now() - start).toFixed(0)}ms auth=${result.authElapsed.toFixed(0)}ms`
-  );
-  return result.response;
-}
-
-async function run(request: NextRequest): Promise<{ response: NextResponse; authElapsed: number }> {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -57,43 +44,44 @@ async function run(request: NextRequest): Promise<{ response: NextResponse; auth
     }
   );
 
-  const authStart = performance.now();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const authElapsed = performance.now() - authStart;
+  // getClaims() refreshes an expired session (writing the new cookies via
+  // setAll above) and then verifies the JWT locally against the project's
+  // signing keys — unlike getUser(), no Supabase Auth round trip on every
+  // navigation.
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub ?? null;
 
   const isLoginPage = request.nextUrl.pathname.startsWith("/login");
 
-  if (!user && !isLoginPage) {
+  if (!userId && !isLoginPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return { response: NextResponse.redirect(url), authElapsed };
+    return NextResponse.redirect(url);
   }
 
-  if (user && isLoginPage) {
+  if (userId && isLoginPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
-    return { response: NextResponse.redirect(url), authElapsed };
+    return NextResponse.redirect(url);
   }
 
-  const gate = user && ROLE_GATES.find((g) => request.nextUrl.pathname.startsWith(g.prefix));
+  const gate = userId && ROLE_GATES.find((g) => request.nextUrl.pathname.startsWith(g.prefix));
   if (gate) {
     const { data: profile, error } = await supabase
       .from("profiles")
       .select("role, is_owner")
-      .eq("id", user!.id)
+      .eq("id", userId)
       .single<Pick<Profile, "role" | "is_owner">>();
-    if (error) console.error("proxy: role-gate profile lookup failed for user", user!.id, error);
+    if (error) console.error("proxy: role-gate profile lookup failed for user", userId, error);
 
     if (!profile || !gate.allowed(profile)) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
-      return { response: NextResponse.redirect(url), authElapsed };
+      return NextResponse.redirect(url);
     }
   }
 
-  return { response, authElapsed };
+  return response;
 }
 
 export const config = {
@@ -103,6 +91,6 @@ export const config = {
     // an unauthenticated service-worker registration request to /login's
     // HTML instead of serving the actual script, and registration fails
     // silently (the browser rejects a non-JS response for a SW script).
-    "/((?!_next/static|_next/image|favicon.ico|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

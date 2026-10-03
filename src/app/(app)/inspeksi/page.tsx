@@ -50,7 +50,7 @@ export default async function InspeksiPage() {
             key={r.id}
             className="flex items-center gap-2 rounded-[18px] border border-border bg-card p-3.5 transition-colors hover:bg-secondary/40"
           >
-            <Link href={`/inspeksi/${r.id}`} className="flex min-w-0 flex-1 items-center gap-3.5">
+            <Link href={`/inspeksi/${r.id}`} className="pressable flex min-w-0 flex-1 items-center gap-3.5">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-bold">{r.nama}</div>
                 <div className="truncate text-xs text-muted-foreground">

@@ -25,10 +25,12 @@ export function TopBar() {
   const initial = profile.name.charAt(0).toUpperCase();
 
   return (
-    <div className="sticky top-0 z-40 flex shrink-0 items-center justify-between border-b border-border bg-card px-4 pt-5 pb-4 sm:px-6 md:px-8 md:pt-7 lg:px-10">
+    // Compact on phones (more room for content), padded below the notch /
+    // status bar when installed to the home screen.
+    <div className="app-chrome z-40 flex shrink-0 items-center justify-between border-b border-border bg-card px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 sm:px-6 md:px-8 md:pt-6 md:pb-4 lg:px-10">
       <div className="flex items-center gap-2.5">
         {/* eslint-disable-next-line @next/next/no-img-element -- tiny static logo, same plain <img> approach as the rest of the app */}
-        <img src="/logo.png" alt="Motorell" className="size-9 rounded-[11px]" />
+        <img src="/logo.png" alt="Motorell" draggable={false} className="size-9 rounded-[11px]" />
         <div className="flex flex-col leading-[1.15]">
           <span className="text-[15px] font-extrabold">Motorell</span>
           <span className="text-[11px] font-semibold text-muted-foreground">Garage</span>
@@ -40,7 +42,7 @@ export function TopBar() {
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label="Menu akun"
-          className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="pressable rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <Avatar className="size-[38px]">
             {profile.profile_photo_url && <AvatarImage src={profile.profile_photo_url} alt={profile.name} />}

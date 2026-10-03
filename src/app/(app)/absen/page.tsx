@@ -4,7 +4,8 @@ import { CheckInCard } from "./CheckInCard";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { isAdminOrAbove } from "@/types/database";
+import { getMyProfile, getSessionUserId } from "@/lib/session";
+import { isAdminOrAbove, isOwner } from "@/types/database";
 import type { Attendance, AttendanceStatus, Profile } from "@/types/database";
 
 type AbsenProfile = Pick<Profile, "name" | "is_owner" | "tracks_attendance" | "role" | "position">;
@@ -19,36 +20,34 @@ const STATUS_BADGE: Record<"masuk" | "tidak" | "pending", string> = {
 
 export default async function AbsenPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const today = todayIso();
 
-  // Neither query below depends on the other's result (both only need the
-  // already-resolved user id), so they run concurrently instead of as two
-  // sequential round trips.
-  const [{ data: profile }, { data: myAttendance }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("name, is_owner, tracks_attendance, role, position")
-      .eq("id", user!.id)
-      .single<AbsenProfile>(),
-    supabase
-      .from("attendance")
-      .select("status")
-      .eq("user_id", user!.id)
-      .eq("date", today)
-      .maybeSingle<{ status: AttendanceStatus }>(),
-  ]);
+  // Profile is the layout's per-request cached copy (no extra query).
+  const profile: AbsenProfile | null = await getMyProfile();
+  const userId = (await getSessionUserId())!;
+  const canSeeTeam = !!profile && isAdminOrAbove(profile);
 
-  const skipCheckIn = profile?.is_owner || profile?.tracks_attendance === false;
+  const skipCheckIn = (profile && isOwner(profile)) || profile?.tracks_attendance === false;
 
   let roster: RosterProfile[] = [];
   let attendanceToday: RosterAttendance[] = [];
-  const canSeeTeam = !!profile && isAdminOrAbove(profile);
-  if (canSeeTeam) {
-    // These two are also independent of each other — fetched in parallel.
+  // My own status and (for owner/admin) the team roster are independent —
+  // one parallel round trip.
+  const [{ data: myAttendance }, team] = await Promise.all([
+    supabase
+      .from("attendance")
+      .select("status")
+      .eq("user_id", userId)
+      .eq("date", today)
+      .maybeSingle<{ status: AttendanceStatus }>(),
+    canSeeTeam ? loadTeam() : null,
+  ]);
+  if (team) {
+    roster = team.roster;
+    attendanceToday = team.attendanceToday;
+  }
+
+  async function loadTeam() {
     const [{ data: allProfiles }, { data: allAttendance }] = await Promise.all([
       supabase
         .from("profiles")
@@ -63,8 +62,7 @@ export default async function AbsenPage() {
         .limit(200)
         .returns<RosterAttendance[]>(),
     ]);
-    roster = allProfiles ?? [];
-    attendanceToday = allAttendance ?? [];
+    return { roster: allProfiles ?? [], attendanceToday: allAttendance ?? [] };
   }
 
   return (
@@ -82,11 +80,11 @@ export default async function AbsenPage() {
         </Avatar>
         <div className="text-base font-bold">{profile?.name}</div>
         <div className="mb-5 text-xs text-muted-foreground">
-          {profile?.is_owner ? "Owner" : profile?.position}
+          {profile && isOwner(profile) ? "Owner" : profile?.position}
         </div>
 
         {skipCheckIn ? (
-          profile?.is_owner ? null : (
+          profile && isOwner(profile) ? null : (
             <p className="text-sm font-semibold">Attendance isn&apos;t tracked for this account.</p>
           )
         ) : (

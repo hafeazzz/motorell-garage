@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getMyProfile } from "@/lib/session";
 import { rupiah, formatDateStr, formatPeriodLabel, jakartaDateIso, jakartaPeriodKey } from "@/lib/utils";
 import { monthToDateCashflow } from "@/lib/finance";
 import { CashflowChartLazy } from "./CashflowChartLazy";
@@ -15,15 +16,11 @@ type LaporanExpense = Pick<UnitExpense, "unit_id" | "nominal">;
 
 export default async function LaporanPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  // The profile lookup and the sold-units lookup don't depend on each
-  // other (only on the already-resolved user id / a fixed status filter),
-  // so they run concurrently instead of as two sequential round trips.
-  const [{ data: profile }, { data: soldUnits }] = await Promise.all([
-    supabase.from("profiles").select("role, is_owner").eq("id", user!.id).single<LaporanProfile>(),
+  // Profile is the layout's per-request cached copy; the sold-units query
+  // runs alongside it.
+  const [profile, { data: soldUnits }] = await Promise.all([
+    getMyProfile() as Promise<LaporanProfile | null>,
     supabase
       .from("units")
       .select("id, nama, tahun, plat, harga_jual, modal_beli, tanggal_jual")
@@ -147,7 +144,7 @@ export default async function LaporanPage() {
                   key={unit.id}
                   href={`/inventori/${unit.id}`}
                   prefetch
-                  className="flex items-center gap-3.5 rounded-[18px] border border-border bg-card p-3.5 transition-colors hover:bg-secondary/40"
+                  className="pressable flex items-center gap-3.5 rounded-[18px] border border-border bg-card p-3.5 hover:bg-secondary/40"
                 >
                   <div className="size-[52px] shrink-0 rounded-[14px] bg-[image:var(--cream-blue-bg)]" />
                   <div className="min-w-0 flex-1">

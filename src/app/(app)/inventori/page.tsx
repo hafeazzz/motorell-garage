@@ -96,7 +96,7 @@ export default async function InventoriPage() {
             key={unit.id}
             href={`/inventori/${unit.id}`}
             prefetch
-            className="flex items-center gap-3.5 rounded-[18px] border border-border bg-card p-3.5 transition-colors hover:bg-secondary/40"
+            className="pressable flex items-center gap-3.5 rounded-[18px] border border-border bg-card p-3.5 hover:bg-secondary/40"
           >
             <div className={cn("size-[52px] shrink-0 rounded-[14px]", STATUS_BG[unit.status])} />
             <div className="min-w-0 flex-1">

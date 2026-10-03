@@ -112,7 +112,7 @@ export default async function ArsipPage({ searchParams }: { searchParams: Promis
   return (
     <div>
       <div className="mb-4 flex items-center gap-3 sm:mb-5">
-        <Link href="/inventori" className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-card">
+        <Link href="/inventori" className="pressable flex size-9 shrink-0 items-center justify-center rounded-xl bg-card">
           <ArrowLeft className="size-4" />
         </Link>
         <div>
@@ -203,7 +203,7 @@ export default async function ArsipPage({ searchParams }: { searchParams: Promis
               <Link
                 key={r.id}
                 href={`/inspeksi/${r.id}`}
-                className="flex items-center gap-3 rounded-[18px] border border-border bg-card p-3.5 transition-colors hover:bg-secondary/40"
+                className="pressable flex items-center gap-3 rounded-[18px] border border-border bg-card p-3.5 hover:bg-secondary/40"
               >
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-bold">{r.nama}</div>

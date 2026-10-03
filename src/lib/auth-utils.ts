@@ -1,23 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
+import { getMyProfile, getSessionUserId } from "@/lib/session";
 import { isOwner, isAdminOrAbove, canAccessFinancials, canManageUsers } from "@/types/database";
 import type { Profile } from "@/types/database";
 
 /** Signed-in user's profile row, or throws if there isn't one. For use at the top of server actions. */
 export async function getCurrentProfile(): Promise<Profile> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not signed in");
-
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single<Profile>();
-  if (error) console.error("getCurrentProfile: query failed for user", user.id, error);
+  if (!(await getSessionUserId())) throw new Error("Not signed in");
+  const profile = await getMyProfile();
   if (!profile) throw new Error("No profile found for this account");
-
   return profile;
 }
 

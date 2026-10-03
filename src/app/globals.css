@@ -169,3 +169,65 @@ a {
     @apply font-sans;
   }
 }
+
+/* ===== Native-app feel on phones (borrowed from Motorell Ops) ===== */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* While the app shell is mounted, the document itself never scrolls: only
+   <main class="app-scroll"> does. That kills the iOS rubber-band drag of the
+   whole page, Android pull-to-refresh, and the top/bottom bars sliding away.
+   Scoped with :has() so the login page keeps normal scrolling (keyboard). */
+html:has(.app-shell),
+html:has(.app-shell) body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--card-bg);
+  /* No 300ms double-tap-zoom delay on taps. */
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+}
+
+.app-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-top: 1rem;
+}
+
+/* Thin, quiet scrollbar on desktop; none on touch screens (native apps
+   don't show one). */
+.app-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+@media (pointer: coarse) {
+  .app-scroll {
+    scrollbar-width: none;
+  }
+  .app-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Chrome (top bar, bottom nav) behaves like native UI: no accidental text
+   selection or iOS long-press callout when tapping around. */
+.app-chrome {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Press feedback for tappable cards/rows/buttons — the small "give" that
+   makes a tap feel registered immediately, even before the next screen
+   arrives. */
+.pressable {
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+.pressable:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}

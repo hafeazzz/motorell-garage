@@ -2,25 +2,18 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TeamRoster } from "./TeamRoster";
 import { AddAccountForm } from "./AddAccountForm";
+import { getMyProfile } from "@/lib/session";
+import { isAdminOrAbove } from "@/types/database";
 import type { TeamProfile } from "@/types/database";
 
 export default async function TeamPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const me = await getMyProfile();
 
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("is_owner")
-    .eq("id", user!.id)
-    .single();
-
-  // Server-side guard — the nav link is hidden for non-owners, but that's
-  // only a UI convenience. Anyone who navigates here directly must still
-  // be turned away, since RLS alone won't stop them from *viewing* this
-  // page (only from calling the owner-only actions on it).
-  if (!me?.is_owner) redirect("/");
+  // Server-side guard, same rule as proxy.ts and the nav tab (owner/admin).
+  // The tab being hidden is only a UI convenience; anyone who navigates
+  // here directly must still be turned away.
+  if (!me || !isAdminOrAbove(me)) redirect("/");
 
   // Only what TeamRoster/AddAccountForm render — skips profile_photo_url
   // and created_at, which this page never touches.
