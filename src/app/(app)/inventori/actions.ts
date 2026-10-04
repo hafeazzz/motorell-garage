@@ -3,13 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth-utils";
+import { requireAdmin, requireInventoryAccess } from "@/lib/auth-utils";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { syncInvestorPayouts } from "@/lib/investors";
 import { todayIso } from "@/lib/utils";
+import { isAdminOrAbove } from "@/types/database";
 import type { UnitStatus } from "@/types/database";
 
 export async function createUnit(formData: FormData) {
-  await requireAdmin();
+  await requireInventoryAccess();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("units")
@@ -32,7 +34,7 @@ export async function createUnit(formData: FormData) {
 }
 
 export async function updateUnit(unitId: number, formData: FormData) {
-  await requireAdmin();
+  const me = await requireInventoryAccess();
   const supabase = await createClient();
   const status = String(formData.get("status")) as UnitStatus;
 
@@ -66,7 +68,9 @@ export async function updateUnit(unitId: number, formData: FormData) {
   if (error) throw new Error(error.message);
 
   // Sale (or a price/status change) can create, refresh or drop investor payouts.
-  await syncInvestorPayouts(supabase, unitId);
+  // Service role: a mechanic can edit the unit but RLS keeps payouts
+  // owner/admin-only, and the payouts must still follow the sale.
+  await syncInvestorPayouts(createServiceRoleClient(), unitId);
 
   revalidatePath("/inventori");
   revalidatePath(`/inventori/${unitId}`);
@@ -74,8 +78,9 @@ export async function updateUnit(unitId: number, formData: FormData) {
   revalidatePath("/finance");
   revalidatePath("/");
 
+  // /laporan is owner/admin only — everyone else stays in the inventory.
   if (status === "sold") {
-    redirect("/laporan");
+    redirect(isAdminOrAbove(me) ? "/laporan" : "/inventori");
   }
 }
 
@@ -95,6 +100,7 @@ export async function deleteUnit(unitId: number) {
 }
 
 export async function addExpense(unitId: number, formData: FormData) {
+  await requireInventoryAccess();
   const supabase = await createClient();
   const { error } = await supabase.from("unit_expenses").insert({
     unit_id: unitId,
@@ -104,16 +110,17 @@ export async function addExpense(unitId: number, formData: FormData) {
   });
   if (error) throw new Error(error.message);
 
-  await syncInvestorPayouts(supabase, unitId);
+  await syncInvestorPayouts(createServiceRoleClient(), unitId);
   revalidatePath(`/inventori/${unitId}`);
 }
 
 export async function deleteExpense(unitId: number, expenseId: number) {
+  await requireInventoryAccess();
   const supabase = await createClient();
   const { error } = await supabase.from("unit_expenses").delete().eq("id", expenseId);
   if (error) throw new Error(error.message);
 
-  await syncInvestorPayouts(supabase, unitId);
+  await syncInvestorPayouts(createServiceRoleClient(), unitId);
   revalidatePath(`/inventori/${unitId}`);
 }
 

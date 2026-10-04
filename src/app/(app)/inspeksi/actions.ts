@@ -7,7 +7,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getCurrentProfile, requireAdmin } from "@/lib/auth-utils";
 import { isKnownItem } from "@/lib/inspection";
 import { jakartaDateIso } from "@/lib/utils";
-import { canAccessFinancials, isAdminOrAbove } from "@/types/database";
+import { canAccessInventory, isAdminOrAbove } from "@/types/database";
 import type {
   Inspection,
   InspectionHistoryAction,
@@ -224,7 +224,7 @@ export async function decideInspection(
 
   // Staff can't open Inventori (proxy.ts gates it to owner/admin/manager),
   // so they go back to the inspection list instead of a page that would bounce them.
-  const redirectTo = unitId && canAccessFinancials(profile) ? `/inventori/${unitId}` : "/inspeksi";
+  const redirectTo = unitId && canAccessInventory(profile) ? `/inventori/${unitId}` : "/inspeksi";
   return { decision, unitId, redirectTo };
 }
 

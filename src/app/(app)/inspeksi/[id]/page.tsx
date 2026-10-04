@@ -6,7 +6,7 @@ import { getCurrentProfile } from "@/lib/auth-utils";
 import { INSPECTION_STATUS_LABEL, INSPECTION_STATUS_STYLE } from "@/lib/inspection";
 import { Badge } from "@/components/ui/badge";
 import { cn, rupiah } from "@/lib/utils";
-import { canAccessFinancials, isAdminOrAbove } from "@/types/database";
+import { canAccessInventory, isAdminOrAbove } from "@/types/database";
 import { InspeksiChecklist, type ItemState } from "./InspeksiChecklist";
 import { InspectionSummary } from "./InspectionSummary";
 import { InspectionHistory } from "./InspectionHistory";
@@ -86,7 +86,7 @@ export default async function InspectionDetailPage({ params }: { params: Promise
 
           <InspectionSummary inspectionId={ins.id} live={live} initialItems={items} initialNotes={ins.notes} />
 
-          {ins.unit_id && canAccessFinancials(profile) && (
+          {ins.unit_id && canAccessInventory(profile) && (
             <Link href={`/inventori/${ins.unit_id}`} className="mt-4 block text-sm font-semibold text-primary underline">
               Buka unit di Inventori
             </Link>

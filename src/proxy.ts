@@ -1,18 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { canAccessFinancials, isAdminOrAbove, isOwner } from "@/types/database";
+import { canAccessInventory, isAdminOrAbove, isOwner } from "@/types/database";
 import type { Profile } from "@/types/database";
 
 // Route prefixes gated by role, checked in order — first match wins.
-// /inventori: owner/admin/manager. /laporan (financial report), /finance and
+// /inventori: owner/admin/manager/mechanic. /laporan (financial report), /finance and
 // /team: owner/admin only. /finance/investor-payouts: owner only. /inspeksi is open to everyone
 // signed in (mechanics do the inspecting).
-const ROLE_GATES: { prefix: string; allowed: (profile: Pick<Profile, "role" | "is_owner">) => boolean }[] = [
+const ROLE_GATES: { prefix: string; allowed: (profile: Pick<Profile, "role" | "is_owner" | "position">) => boolean }[] = [
   { prefix: "/team", allowed: isAdminOrAbove },
   // Must stay above "/finance" — first match wins.
   { prefix: "/finance/investor-payouts", allowed: isOwner },
   { prefix: "/finance", allowed: isAdminOrAbove },
-  { prefix: "/inventori", allowed: canAccessFinancials },
+  { prefix: "/inventori", allowed: canAccessInventory },
   { prefix: "/laporan", allowed: isAdminOrAbove },
 ];
 
@@ -69,9 +69,9 @@ export async function proxy(request: NextRequest) {
   if (gate) {
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("role, is_owner")
+      .select("role, is_owner, position")
       .eq("id", userId)
-      .single<Pick<Profile, "role" | "is_owner">>();
+      .single<Pick<Profile, "role" | "is_owner" | "position">>();
     if (error) console.error("proxy: role-gate profile lookup failed for user", userId, error);
 
     if (!profile || !gate.allowed(profile)) {

@@ -6,14 +6,14 @@ import { usePathname } from "next/navigation";
 import { Home, Clock, Package, FileBarChart, Users, ClipboardCheck } from "lucide-react";
 import { useProfile } from "@/lib/profile-context";
 import { cn } from "@/lib/utils";
-import { canAccessFinancials, isAdminOrAbove } from "@/types/database";
+import { canAccessInventory, isAdminOrAbove } from "@/types/database";
 import type { Profile } from "@/types/database";
 
 type NavItem = {
   href: string;
   label: string;
   icon: typeof Home;
-  visible: (p: Pick<Profile, "role" | "is_owner">) => boolean;
+  visible: (p: Pick<Profile, "role" | "is_owner" | "position">) => boolean;
 };
 
 // Tabs are filtered by role so nobody sees a tab that proxy.ts would just
@@ -23,7 +23,7 @@ const ITEMS: NavItem[] = [
   { href: "/", label: "Home", icon: Home, visible: () => true },
   { href: "/absen", label: "Attendance", icon: Clock, visible: () => true },
   { href: "/inspeksi", label: "Inspeksi", icon: ClipboardCheck, visible: () => true },
-  { href: "/inventori", label: "Inventori", icon: Package, visible: canAccessFinancials },
+  { href: "/inventori", label: "Inventori", icon: Package, visible: canAccessInventory },
   { href: "/laporan", label: "Report", icon: FileBarChart, visible: isAdminOrAbove },
   { href: "/team", label: "Team", icon: Users, visible: isAdminOrAbove },
 ];

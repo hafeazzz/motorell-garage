@@ -26,6 +26,19 @@ export function canAccessFinancials(profile: Pick<Profile, "role" | "is_owner">)
   return isOwner(profile) || ROLE_RANK[profile.role] <= ROLE_RANK.manager;
 }
 
+/** Staff whose position is Mechanic (the position is free text set on the Team page). */
+export function isMechanic(profile: Pick<Profile, "position">): boolean {
+  return profile.position.trim().toLowerCase() === "mechanic";
+}
+
+/**
+ * Who may open and edit /inventori: owner/admin/manager, plus mechanics —
+ * they work on the units. Deleting a unit and investor data stay admin-only.
+ */
+export function canAccessInventory(profile: Pick<Profile, "role" | "is_owner" | "position">): boolean {
+  return canAccessFinancials(profile) || isMechanic(profile);
+}
+
 /** Owner or admin — the roles allowed to add/edit/remove team accounts. */
 export function canManageUsers(profile: Pick<Profile, "role" | "is_owner">): boolean {
   return isAdminOrAbove(profile);

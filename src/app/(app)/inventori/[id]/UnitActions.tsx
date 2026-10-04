@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import type { Unit } from "@/types/database";
 
-export function UnitActions({ unit }: { unit: Unit }) {
+export function UnitActions({ unit, canDelete }: { unit: Unit; canDelete: boolean }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -40,15 +40,17 @@ export function UnitActions({ unit }: { unit: Unit }) {
       <Button variant="secondary" size="icon" className="rounded-lg" onClick={() => setEditOpen(true)} aria-label="Edit unit">
         <Pencil className="size-4" />
       </Button>
-      <Button
-        variant="secondary"
-        size="icon"
-        className="rounded-lg text-destructive"
-        onClick={() => setDeleteOpen(true)}
-        aria-label="Delete unit"
-      >
-        <Trash2 className="size-4" />
-      </Button>
+      {canDelete && (
+        <Button
+          variant="secondary"
+          size="icon"
+          className="rounded-lg text-destructive"
+          onClick={() => setDeleteOpen(true)}
+          aria-label="Delete unit"
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      )}
 
       <EditUnitDialog unit={unit} open={editOpen} onOpenChange={setEditOpen} />
 

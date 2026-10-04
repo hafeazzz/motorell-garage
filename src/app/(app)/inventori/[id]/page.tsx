@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { rupiah, formatDateStr } from "@/lib/utils";
 import { getMyProfile } from "@/lib/session";
-import { isAdminOrAbove, unitTotalModal } from "@/types/database";
+import { canAccessInventory, isAdminOrAbove, unitTotalModal } from "@/types/database";
 import { ExpenseList } from "./ExpenseList";
 import { UnitActions } from "./UnitActions";
 import { UnitInvestors } from "./UnitInvestors";
@@ -28,10 +28,11 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
       .order("tanggal", { ascending: false })
       .returns<UnitExpense[]>(),
   ]);
-  // Edit/Delete are owner/admin-only server-side (see actions.ts's
-  // requireAdmin() calls) — this just hides the buttons for everyone else
-  // rather than showing controls that would fail when clicked.
+  // Server-side rules live in actions.ts; this only hides controls that
+  // would fail when clicked. Editing: owner/admin/manager/mechanic.
+  // Deleting a unit and the investor section: owner/admin only.
   const canManage = !!profile && isAdminOrAbove(profile);
+  const canEdit = !!profile && canAccessInventory(profile);
 
   if (!unit) notFound();
 
@@ -61,7 +62,7 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
           <ArrowLeft className="size-4" />
         </Link>
         <div className="min-w-0 flex-1 truncate text-base font-bold">{unit.nama}</div>
-        {canManage && <UnitActions unit={unit} />}
+        {canEdit && <UnitActions unit={unit} canDelete={canManage} />}
       </div>
 
       {unit.photo_url && (
