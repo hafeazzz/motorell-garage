@@ -6,7 +6,7 @@ import { getCurrentProfile } from "@/lib/auth-utils";
 import { INSPECTION_STATUS_LABEL, INSPECTION_STATUS_STYLE } from "@/lib/inspection";
 import { Badge } from "@/components/ui/badge";
 import { cn, rupiah } from "@/lib/utils";
-import { canAccessInventory, isAdminOrAbove } from "@/types/database";
+import { canAccessInventory, canManageInspections, isAdminOrAbove } from "@/types/database";
 import { InspeksiChecklist, type ItemState } from "./InspeksiChecklist";
 import { InspectionSummary } from "./InspectionSummary";
 import { InspectionHistory } from "./InspectionHistory";
@@ -21,6 +21,7 @@ export default async function InspectionDetailPage({ params }: { params: Promise
   const supabase = await createClient();
   const profile = await getCurrentProfile();
   const admin = isAdminOrAbove(profile);
+  const manager = canManageInspections(profile);
 
   const { data: ins } = await supabase
     .from("inspections")
@@ -43,12 +44,11 @@ export default async function InspectionDetailPage({ params }: { params: Promise
 
   const isInspector = ins.inspector_id === profile.id;
   const active = !ins.is_deleted;
-  // Only the inspector fills the checklist in; everyone else (owner/admin
-  // included) watches it update live, which also avoids two people
-  // editing the same draft.
-  const editable = active && ins.status === "draft" && isInspector;
+  // The inspector fills the checklist in; owner/admin/mechanic may also
+  // open and edit any draft. Everyone else watches it update live.
+  const editable = active && ins.status === "draft" && (isInspector || manager);
   const live = active && ins.status === "draft";
-  const canDecide = active && ins.status === "selesai" && (isInspector || admin);
+  const canDecide = active && ins.status === "selesai" && (isInspector || manager);
   const inspectorName = ins.profiles?.name ?? "Inspektur tidak dikenal";
 
   return (
@@ -98,7 +98,7 @@ export default async function InspectionDetailPage({ params }: { params: Promise
 
       <InspectionHistory inspectionId={ins.id} />
 
-      {admin && active && (
+      {manager && active && (
         <div className="mt-4 flex justify-center">
           <DeleteInspectionButton inspectionId={ins.id} nama={ins.nama} redirectTo="/inspeksi" />
         </div>

@@ -39,6 +39,11 @@ export function canAccessInventory(profile: Pick<Profile, "role" | "is_owner" | 
   return canAccessFinancials(profile) || isMechanic(profile);
 }
 
+/** Owner, admin, or mechanic — may edit, decide and delete ANY inspection (others only their own draft). */
+export function canManageInspections(profile: Pick<Profile, "role" | "is_owner" | "position">): boolean {
+  return isAdminOrAbove(profile) || isMechanic(profile);
+}
+
 /** Owner or admin — the roles allowed to add/edit/remove team accounts. */
 export function canManageUsers(profile: Pick<Profile, "role" | "is_owner">): boolean {
   return isAdminOrAbove(profile);

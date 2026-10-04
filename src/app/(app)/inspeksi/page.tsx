@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { INS_TOTAL, INSPECTION_STATUS_LABEL as STATUS_LABEL, INSPECTION_STATUS_STYLE as STATUS_STYLE } from "@/lib/inspection";
 import { cn, formatDateStr, rupiah } from "@/lib/utils";
-import { isAdminOrAbove } from "@/types/database";
+import { canManageInspections } from "@/types/database";
 import { DeleteInspectionButton } from "./DeleteInspectionButton";
 import type { Inspection } from "@/types/database";
 
@@ -15,7 +15,7 @@ type Row = Inspection & { profiles: { name: string } | null; inspection_items: {
 export default async function InspeksiPage() {
   const supabase = await createClient();
   const profile = await getCurrentProfile();
-  const admin = isAdminOrAbove(profile);
+  const admin = canManageInspections(profile);
 
   const { data } = await supabase
     .from("inspections")

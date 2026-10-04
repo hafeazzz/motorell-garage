@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { getCurrentProfile, requireAdmin } from "@/lib/auth-utils";
+import { getCurrentProfile, requireInspectionManager } from "@/lib/auth-utils";
 import { isKnownItem } from "@/lib/inspection";
 import { jakartaDateIso } from "@/lib/utils";
-import { canAccessInventory, isAdminOrAbove } from "@/types/database";
+import { canAccessInventory, canManageInspections } from "@/types/database";
 import type {
   Inspection,
   InspectionHistoryAction,
@@ -45,6 +45,15 @@ async function logHistory(entry: {
   if (error) console.error("inspection_history insert failed", error);
 }
 
+/**
+ * RLS lets a plain account write only its OWN draft. Owner/admin/mechanic
+ * may edit any inspection, so for them (already authorized by the caller)
+ * the write goes through the service role.
+ */
+async function dbFor(profile: Profile) {
+  return canManageInspections(profile) ? createServiceRoleClient() : await createClient();
+}
+
 export async function createInspection(formData: FormData) {
   const profile = await getCurrentProfile();
   const nama = String(formData.get("nama") || "").trim();
@@ -73,7 +82,7 @@ export async function setItem(
   item: string,
   patch: { status?: InspectionItemStatus | null; photo_url?: string | null }
 ) {
-  await getCurrentProfile();
+  const profile = await getCurrentProfile();
   if (!isKnownItem(section, item)) throw new Error("Unknown checklist item.");
 
   const row: Record<string, unknown> = {
@@ -86,7 +95,7 @@ export async function setItem(
   if ("status" in patch) row.status = patch.status ?? null;
   if ("photo_url" in patch) row.photo_url = patch.photo_url ?? null;
 
-  const supabase = await createClient();
+  const supabase = await dbFor(profile);
   const { error } = await supabase
     .from("inspection_items")
     .upsert(row, { onConflict: "inspection_id,section,item_name" });
@@ -94,8 +103,8 @@ export async function setItem(
 }
 
 export async function saveNotes(inspectionId: number, notes: string) {
-  await getCurrentProfile();
-  const supabase = await createClient();
+  const profile = await getCurrentProfile();
+  const supabase = await dbFor(profile);
   const { error } = await supabase
     .from("inspections")
     .update({ notes: notes.trim() || null, updated_at: new Date().toISOString() })
@@ -110,7 +119,7 @@ export async function saveNotes(inspectionId: number, notes: string) {
  */
 export async function finishInspection(inspectionId: number) {
   const profile = await getCurrentProfile();
-  const supabase = await createClient();
+  const supabase = await dbFor(profile);
 
   const { count } = await supabase
     .from("inspection_items")
@@ -158,8 +167,8 @@ export async function decideInspection(
     .eq("id", inspectionId)
     .single<Inspection>();
   if (!ins || ins.is_deleted) throw new Error("Inspection not found.");
-  if (ins.inspector_id !== profile.id && !isAdminOrAbove(profile)) {
-    throw new Error("Only the inspector or an owner/admin can decide this.");
+  if (ins.inspector_id !== profile.id && !canManageInspections(profile)) {
+    throw new Error("Only the inspector, an owner/admin or a mechanic can decide this.");
   }
   if (ins.status !== "selesai") throw new Error("Finish the inspection first, or it was already decided.");
 
@@ -228,10 +237,12 @@ export async function decideInspection(
   return { decision, unitId, redirectTo };
 }
 
-/** Owner/admin only. Soft delete: the row and its history are kept. */
+/** Owner/admin/mechanic. Soft delete: the row and its history are kept. */
 export async function deleteInspection(inspectionId: number) {
-  const profile = await requireAdmin();
-  const supabase = await createClient();
+  const profile = await requireInspectionManager();
+  // RLS only lets owner/admin touch other people's or finished inspections,
+  // so after the check above this runs with the service role.
+  const supabase = createServiceRoleClient();
 
   const { data: ins, error } = await supabase
     .from("inspections")
