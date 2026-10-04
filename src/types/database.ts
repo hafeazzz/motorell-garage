@@ -33,7 +33,7 @@ export function isMechanic(profile: Pick<Profile, "position">): boolean {
 
 /**
  * Who may open and edit /inventori: owner/admin/manager, plus mechanics —
- * they work on the units. Deleting a unit and investor data stay admin-only.
+ * they work on the units. Investor data stays admin-only.
  */
 export function canAccessInventory(profile: Pick<Profile, "role" | "is_owner" | "position">): boolean {
   return canAccessFinancials(profile) || isMechanic(profile);

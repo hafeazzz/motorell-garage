@@ -85,7 +85,7 @@ export async function updateUnit(unitId: number, formData: FormData) {
 }
 
 export async function deleteUnit(unitId: number) {
-  await requireAdmin();
+  await requireInventoryAccess();
   const supabase = await createClient();
 
   // unit_expenses.unit_id has `on delete cascade` (see supabase/schema.sql),

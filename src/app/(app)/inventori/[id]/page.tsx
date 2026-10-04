@@ -29,8 +29,8 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
       .returns<UnitExpense[]>(),
   ]);
   // Server-side rules live in actions.ts; this only hides controls that
-  // would fail when clicked. Editing: owner/admin/manager/mechanic.
-  // Deleting a unit and the investor section: owner/admin only.
+  // would fail when clicked. Editing and deleting a unit: owner/admin/manager/
+  // mechanic. The investor section: owner/admin only.
   const canManage = !!profile && isAdminOrAbove(profile);
   const canEdit = !!profile && canAccessInventory(profile);
 
@@ -62,7 +62,7 @@ export default async function UnitDetailPage({ params }: { params: Promise<{ id:
           <ArrowLeft className="size-4" />
         </Link>
         <div className="min-w-0 flex-1 truncate text-base font-bold">{unit.nama}</div>
-        {canEdit && <UnitActions unit={unit} canDelete={canManage} />}
+        {canEdit && <UnitActions unit={unit} />}
       </div>
 
       {unit.photo_url && (
