@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { requireCanManageUsers } from "@/lib/auth-utils";
@@ -11,7 +10,6 @@ export async function updatePosition(profileId: string, position: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update({ position }).eq("id", profileId);
   if (error) throw new Error(error.message);
-  revalidatePath("/team");
 }
 
 export async function updateRole(profileId: string, role: Role) {
@@ -19,7 +17,6 @@ export async function updateRole(profileId: string, role: Role) {
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update({ role }).eq("id", profileId);
   if (error) throw new Error(error.message);
-  revalidatePath("/team");
 }
 
 export async function updateTracksAttendance(profileId: string, tracksAttendance: boolean) {
@@ -30,8 +27,6 @@ export async function updateTracksAttendance(profileId: string, tracksAttendance
     .update({ tracks_attendance: tracksAttendance })
     .eq("id", profileId);
   if (error) throw new Error(error.message);
-  revalidatePath("/team");
-  revalidatePath("/absen");
 }
 
 export async function renameProfile(profileId: string, name: string) {
@@ -39,7 +34,6 @@ export async function renameProfile(profileId: string, name: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update({ name: name.trim() }).eq("id", profileId);
   if (error) throw new Error(error.message);
-  revalidatePath("/team");
 }
 
 export async function deleteAccount(profileId: string) {
@@ -49,7 +43,6 @@ export async function deleteAccount(profileId: string) {
   const admin = createServiceRoleClient();
   const { error } = await admin.auth.admin.deleteUser(profileId);
   if (error) throw new Error(error.message);
-  revalidatePath("/team");
 }
 
 export async function createAccount(formData: FormData) {
@@ -82,5 +75,4 @@ export async function createAccount(formData: FormData) {
   });
   if (profileError) throw new Error(profileError.message);
 
-  revalidatePath("/team");
 }

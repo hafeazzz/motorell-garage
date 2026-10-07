@@ -16,11 +16,13 @@ export function UnitInvestors({
   investors,
   payouts,
   sold,
+  onChange,
 }: {
   unitId: number;
   investors: UnitInvestor[];
   payouts: InvestorPayout[];
   sold: boolean;
+  onChange: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState("");
@@ -35,6 +37,7 @@ export function UnitInvestors({
     startTransition(async () => {
       try {
         await addInvestor(unitId, fd);
+        onChange();
         setName("");
         setShare("");
         toast.success("Investor added.");
@@ -48,6 +51,7 @@ export function UnitInvestors({
     startTransition(async () => {
       try {
         await removeInvestor(unitId, id);
+        onChange();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Couldn't remove investor.");
       }

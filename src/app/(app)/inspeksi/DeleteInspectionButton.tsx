@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useGarage } from "@/lib/store";
 import { Trash2 } from "lucide-react";
 import { deleteInspection } from "./actions";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Owner/admin only — callers only render it for them, and deleteInspection()
+// Owner/admin/mechanic — callers only render it for them, and deleteInspection()
 // re-checks server-side. It's a soft delete: the inspection disappears from
 // the list but stays in the database with a "Inspeksi dihapus" history entry.
 export function DeleteInspectionButton({
@@ -31,20 +31,18 @@ export function DeleteInspectionButton({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const { run } = useGarage();
 
+  // Gone from the list at once; it comes back with a toast if the server refuses.
   function remove() {
-    startTransition(async () => {
-      try {
-        await deleteInspection(inspectionId);
-        toast.success("Inspeksi dihapus.");
-        setOpen(false);
-        if (redirectTo) router.push(redirectTo);
-        router.refresh();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Gagal menghapus.");
-        setOpen(false);
-      }
+    setOpen(false);
+    if (redirectTo) router.push(redirectTo);
+    void run({
+      optimistic: (d) => ({ ...d, inspections: d.inspections.filter((i) => i.id !== inspectionId) }),
+      action: () => deleteInspection(inspectionId),
+      reload: ["inspections"],
+      success: "Inspeksi dihapus.",
+      error: "Gagal menghapus inspeksi.",
     });
   }
 
@@ -53,12 +51,12 @@ export function DeleteInspectionButton({
       {iconOnly ? (
         <Button
           variant="ghost"
-          size="icon-xs"
-          className="rounded-lg bg-secondary text-destructive"
+          size="icon"
+          className="size-10 shrink-0 rounded-xl bg-secondary text-destructive"
           onClick={() => setOpen(true)}
           aria-label={`Hapus inspeksi ${nama}`}
         >
-          <Trash2 className="size-3" />
+          <Trash2 className="size-4" />
         </Button>
       ) : (
         <Button variant="ghost" className="text-destructive" onClick={() => setOpen(true)}>
@@ -78,8 +76,8 @@ export function DeleteInspectionButton({
             <Button variant="secondary" onClick={() => setOpen(false)}>
               Batal
             </Button>
-            <Button variant="destructive" disabled={isPending} onClick={remove}>
-              {isPending ? "Menghapus…" : "Hapus"}
+            <Button variant="destructive" onClick={remove}>
+              Hapus
             </Button>
           </DialogFooter>
         </DialogContent>

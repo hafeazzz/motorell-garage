@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useGarage } from "@/lib/store";
+import { isAdminOrAbove } from "@/types/database";
 import { updateUnit } from "../actions";
 import { createClient } from "@/lib/supabase/client";
 import { todayIso } from "@/lib/utils";
@@ -48,6 +51,8 @@ export function EditUnitDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const { data, reload } = useGarage();
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState<UnitStatus>(unit.status);
   const [photoUrl, setPhotoUrl] = useState(unit.photo_url);
@@ -118,8 +123,11 @@ export function EditUnitDialog({
     startTransition(async () => {
       try {
         await updateUnit(unit.id, formData);
+        await reload(["units"]);
         toast.success("Unit updated.");
         onOpenChange(false);
+        // A sale shows up on the Report — owner/admin go see it there.
+        if (status === "sold" && unit.status !== "sold" && isAdminOrAbove(data.profile)) router.push("/laporan");
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Something went wrong.");
       }

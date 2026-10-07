@@ -1,7 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getCurrentProfile, requireInspectionManager } from "@/lib/auth-utils";
@@ -54,7 +52,8 @@ async function dbFor(profile: Profile) {
   return canManageInspections(profile) ? createServiceRoleClient() : await createClient();
 }
 
-export async function createInspection(formData: FormData) {
+/** Returns the new inspection id — the client opens its checklist. */
+export async function createInspection(formData: FormData): Promise<number> {
   const profile = await getCurrentProfile();
   const nama = String(formData.get("nama") || "").trim();
   if (nama.length < 3) throw new Error("Model name must be at least 3 characters.");
@@ -71,8 +70,7 @@ export async function createInspection(formData: FormData) {
   if (error) throw new Error(error.message);
 
   await logHistory({ inspection: data, action: "created", actor: profile });
-  revalidatePath("/inspeksi");
-  redirect(`/inspeksi/${data.id}`);
+  return data.id as number;
 }
 
 /** Saves one checklist item (called on every tap — this is the draft autosave). */
@@ -138,7 +136,6 @@ export async function finishInspection(inspectionId: number) {
   if (error || !ins) throw new Error("This inspection was already finished.");
 
   await logHistory({ inspection: ins, action: "completed", actor: profile });
-  revalidatePath("/inspeksi");
 }
 
 export type DecisionResult = { decision: "beli" | "tidak"; unitId: number | null; redirectTo: string };
@@ -227,9 +224,6 @@ export async function decideInspection(
     notes: decision === "beli" ? `Harga dibeli Rp ${Math.round(price as number).toLocaleString("id-ID")}` : undefined,
   });
 
-  revalidatePath("/inspeksi");
-  revalidatePath(`/inspeksi/${inspectionId}`);
-  if (unitId) revalidatePath("/inventori");
 
   // Staff can't open Inventori (proxy.ts gates it to owner/admin/manager),
   // so they go back to the inspection list instead of a page that would bounce them.
@@ -254,6 +248,4 @@ export async function deleteInspection(inspectionId: number) {
   if (error || !ins) throw new Error("Inspection not found or already deleted.");
 
   await logHistory({ inspection: ins, action: "deleted", actor: profile });
-  revalidatePath("/inspeksi");
-  revalidatePath(`/inspeksi/${inspectionId}`);
 }

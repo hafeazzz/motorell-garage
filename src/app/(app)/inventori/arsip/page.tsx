@@ -1,19 +1,20 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/auth-utils";
+import { createClient } from "@/lib/supabase/client";
+import { useGarage } from "@/lib/store";
 import { INSPECTION_STATUS_LABEL, INSPECTION_STATUS_STYLE } from "@/lib/inspection";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatDateStr, formatPeriodLabel, rupiah } from "@/lib/utils";
 import { isAdminOrAbove, unitProfit } from "@/types/database";
-import type { Inspection, SoldArchiveRow, Unit, UnitExpense } from "@/types/database";
+import type { SoldArchiveRow } from "@/types/database";
 
-type SoldUnit = Pick<Unit, "id" | "nama" | "tahun" | "plat" | "harga_jual" | "modal_beli" | "tanggal_jual">;
 type ArchivedSale = Pick<
   SoldArchiveRow,
   "id" | "nama" | "tahun" | "plat" | "harga_jual" | "modal_beli" | "total_expenses" | "tanggal_jual" | "period"
 >;
-type InspectionRow = Inspection & { profiles: { name: string } | null };
 
 // One row in the Terjual tab, from either a live unit or the monthly archive.
 type SaleRow = {
@@ -27,80 +28,53 @@ type SaleRow = {
   href: string | null; // archived rows have no unit page any more
 };
 
-export default async function ArsipPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const sp = await searchParams;
-  const tab = sp.tab === "inspeksi" ? "inspeksi" : "terjual";
+export default function ArsipPage() {
+  const { data } = useGarage();
+  const [tab, setTab] = useState<"terjual" | "inspeksi">("terjual");
+  const admin = isAdminOrAbove(data.profile);
+  const nameOf = (id: string | null) => data.profiles.find((p) => p.id === id)?.name;
 
-  const supabase = await createClient();
-  const profile = await getCurrentProfile();
-  const admin = isAdminOrAbove(profile);
-
-  let sales: SaleRow[] = [];
-  let inspections: InspectionRow[] = [];
-
-  if (tab === "terjual") {
-    const [liveRes, archiveRes] = await Promise.all([
-      supabase
-        .from("units")
-        .select("id, nama, tahun, plat, harga_jual, modal_beli, tanggal_jual")
-        .eq("status", "sold")
-        .order("tanggal_jual", { ascending: false })
-        .limit(300)
-        .returns<SoldUnit[]>(),
-      // sold_archive is owner/admin-only in RLS; for anyone else this is
-      // simply empty, so skip the round trip.
-      admin
-        ? supabase
-            .from("sold_archive")
-            .select("id, nama, tahun, plat, harga_jual, modal_beli, total_expenses, tanggal_jual, period")
-            .order("tanggal_jual", { ascending: false })
-            .limit(300)
-            .returns<ArchivedSale[]>()
-        : Promise.resolve({ data: [] as ArchivedSale[] }),
-    ]);
-    const live = liveRes.data ?? [];
-
-    const expenseRes = live.length
-      ? await supabase
-          .from("unit_expenses")
-          .select("unit_id, nominal")
-          .in("unit_id", live.map((u) => u.id))
-          .returns<Pick<UnitExpense, "unit_id" | "nominal">[]>()
-      : { data: [] as Pick<UnitExpense, "unit_id" | "nominal">[] };
-
-    sales = [
-      ...live.map((u) => ({
-        key: `u${u.id}`,
-        nama: u.nama,
-        tahun: u.tahun,
-        plat: u.plat,
-        harga_jual: u.harga_jual ?? 0,
-        profit: unitProfit(u, (expenseRes.data ?? []).filter((e) => e.unit_id === u.id)),
-        tanggal_jual: u.tanggal_jual,
-        href: `/inventori/${u.id}`,
-      })),
-      ...(archiveRes.data ?? []).map((a) => ({
-        key: `a${a.id}`,
-        nama: a.nama,
-        tahun: a.tahun,
-        plat: a.plat,
-        harga_jual: a.harga_jual ?? 0,
-        profit: (a.harga_jual ?? 0) - (a.modal_beli ?? 0) - (a.total_expenses ?? 0),
-        tanggal_jual: a.tanggal_jual,
-        href: null,
-      })),
-    ].sort((a, b) => (b.tanggal_jual ?? "").localeCompare(a.tanggal_jual ?? ""));
-  } else {
-    const { data } = await supabase
-      .from("inspections")
-      .select("*, profiles(name)")
-      .eq("is_deleted", false)
-      .in("status", ["beli", "tidak"])
-      .order("decided_at", { ascending: false })
+  // Past months moved out by the monthly cron — owner/admin-only in RLS,
+  // fetched once when this page opens.
+  const [archived, setArchived] = useState<ArchivedSale[]>([]);
+  useEffect(() => {
+    if (!admin) return;
+    createClient()
+      .from("sold_archive")
+      .select("id, nama, tahun, plat, harga_jual, modal_beli, total_expenses, tanggal_jual, period")
+      .order("tanggal_jual", { ascending: false })
       .limit(300)
-      .returns<InspectionRow[]>();
-    inspections = data ?? [];
-  }
+      .returns<ArchivedSale[]>()
+      .then(({ data: rows }) => setArchived(rows ?? []));
+  }, [admin]);
+
+  const live = data.units.filter((u) => u.status === "sold");
+  const sales: SaleRow[] = [
+    ...live.map((u) => ({
+      key: `u${u.id}`,
+      nama: u.nama,
+      tahun: u.tahun,
+      plat: u.plat,
+      harga_jual: u.harga_jual ?? 0,
+      profit: unitProfit(u, data.expenses.filter((e) => e.unit_id === u.id)),
+      tanggal_jual: u.tanggal_jual,
+      href: `/inventori/${u.id}`,
+    })),
+    ...archived.map((a) => ({
+      key: `a${a.id}`,
+      nama: a.nama,
+      tahun: a.tahun,
+      plat: a.plat,
+      harga_jual: a.harga_jual ?? 0,
+      profit: (a.harga_jual ?? 0) - (a.modal_beli ?? 0) - (a.total_expenses ?? 0),
+      tanggal_jual: a.tanggal_jual,
+      href: null,
+    })),
+  ].sort((a, b) => (b.tanggal_jual ?? "").localeCompare(a.tanggal_jual ?? ""));
+
+  const inspections = data.inspections
+    .filter((r) => r.status === "beli" || r.status === "tidak")
+    .sort((a, b) => (b.decided_at ?? "").localeCompare(a.decided_at ?? ""));
 
   // Group sold rows by month (newest first) so a long history stays readable.
   const byMonth = new Map<string, SaleRow[]>();
@@ -126,16 +100,17 @@ export default async function ArsipPage({ searchParams }: { searchParams: Promis
           { key: "terjual", label: "Terjual" },
           { key: "inspeksi", label: "Sudah diinspeksi" },
         ].map((t) => (
-          <Link
+          <button
             key={t.key}
-            href={`/inventori/arsip?tab=${t.key}`}
+            type="button"
+            onClick={() => setTab(t.key as "terjual" | "inspeksi")}
             className={cn(
-              "rounded-full px-4 py-1.5 text-xs font-bold",
+              "rounded-full px-4 py-2 text-xs font-bold",
               tab === t.key ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
             )}
           >
             {t.label}
-          </Link>
+          </button>
         ))}
       </div>
 
@@ -208,7 +183,7 @@ export default async function ArsipPage({ searchParams }: { searchParams: Promis
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-bold">{r.nama}</div>
                   <div className="truncate text-xs text-muted-foreground">
-                    {[r.plat, r.tahun].filter(Boolean).join(" · ") || "—"} · {r.profiles?.name ?? "Tidak dikenal"}
+                    {[r.plat, r.tahun].filter(Boolean).join(" · ") || "—"} · {nameOf(r.inspector_id) ?? "Tidak dikenal"}
                   </div>
                   <div className="mt-0.5 text-[11.5px] text-muted-foreground">
                     Diputuskan {r.decided_at ? formatDateStr(r.decided_at.slice(0, 10)) : "—"}

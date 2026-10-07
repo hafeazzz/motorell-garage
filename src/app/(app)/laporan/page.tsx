@@ -1,88 +1,48 @@
+"use client";
+
+import { useEffect } from "react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getMyProfile } from "@/lib/session";
+import { useRouter } from "next/navigation";
+import { useGarage } from "@/lib/store";
 import { rupiah, formatDateStr, formatPeriodLabel, jakartaDateIso, jakartaPeriodKey } from "@/lib/utils";
 import { monthToDateCashflow } from "@/lib/finance";
 import { CashflowChartLazy } from "./CashflowChartLazy";
 import { unitTotalModal, unitProfit, isAdminOrAbove, isOwner } from "@/types/database";
-import type { Profile, Unit, UnitExpense } from "@/types/database";
 
-// Narrowed row shapes — only the fields this page actually reads out of
-// each table (see the select() calls below for why).
-type LaporanProfile = Pick<Profile, "role" | "is_owner">;
-type LaporanUnit = Pick<Unit, "id" | "nama" | "tahun" | "plat" | "harga_jual" | "modal_beli" | "tanggal_jual">;
-type LaporanExpense = Pick<UnitExpense, "unit_id" | "nominal">;
-
-export default async function LaporanPage() {
-  const supabase = await createClient();
-
-  // Profile is the layout's per-request cached copy; the sold-units query
-  // runs alongside it.
-  const [profile, { data: soldUnits }] = await Promise.all([
-    getMyProfile() as Promise<LaporanProfile | null>,
-    supabase
-      .from("units")
-      .select("id, nama, tahun, plat, harga_jual, modal_beli, tanggal_jual")
-      .eq("status", "sold")
-      .order("tanggal_jual", { ascending: false })
-      .limit(200)
-      .returns<LaporanUnit[]>(),
-  ]);
-  // proxy.ts already gates /laporan to owner/admin; this is the server-side backstop.
-  if (!profile || !isAdminOrAbove(profile)) redirect("/");
+export default function LaporanPage() {
+  const router = useRouter();
+  const { data } = useGarage();
+  const { profile, units, expenses } = data;
+  // proxy.ts gates /laporan to owner/admin; this is the client-side backstop.
+  const allowed = isAdminOrAbove(profile);
+  useEffect(() => {
+    if (!allowed) router.replace("/");
+  }, [allowed, router]);
   const canSeeProfit = true;
 
-  // Month boundaries in WIB — the server runs in UTC, which would flip the
-  // month 7 hours early.
+  // Month boundaries in WIB, whatever the device clock zone.
   const now = new Date();
   const thisMonth = jakartaPeriodKey(now);
   const today = jakartaDateIso(now);
   const monthStart = `${thisMonth}-01`;
 
-  // Filter to units sold in the current calendar month (older sold units
-  // stay in `units` here in the scaffold — port the monthly-reset cron's
-  // archive step, see src/app/api/cron/monthly-reset, once you're ready
-  // to move past months out of the live table).
-  const thisMonthSold = (soldUnits ?? []).filter((u) => u.tanggal_jual?.startsWith(thisMonth));
+  const thisMonthSold = units.filter((u) => u.status === "sold" && u.tanggal_jual?.startsWith(thisMonth));
 
-  const { data: expenses } = thisMonthSold.length
-    ? await supabase
-        .from("unit_expenses")
-        .select("unit_id, nominal")
-        .in("unit_id", thisMonthSold.map((u) => u.id))
-        .returns<LaporanExpense[]>()
-    : { data: [] as LaporanExpense[] };
-
-  // Cashflow inputs: units bought this month (cash out) and every expense
-  // logged this month, including on units not sold yet.
-  const [{ data: purchases }, { data: monthExpenses }] = await Promise.all([
-    supabase
-      .from("units")
-      .select("modal_beli, tgl_masuk")
-      .gte("tgl_masuk", monthStart)
-      .limit(500)
-      .returns<{ modal_beli: number; tgl_masuk: string }[]>(),
-    supabase
-      .from("unit_expenses")
-      .select("nominal, tanggal")
-      .gte("tanggal", monthStart)
-      .limit(1000)
-      .returns<{ nominal: number; tanggal: string }[]>(),
-  ]);
+  // Cashflow: sales this month in; units bought this month and every
+  // expense logged this month out.
   const cashflow = monthToDateCashflow({
     monthStart,
     today,
     sales: thisMonthSold.map((u) => ({ date: u.tanggal_jual!, amount: u.harga_jual ?? 0 })),
-    purchases: (purchases ?? []).map((p) => ({ date: p.tgl_masuk, amount: p.modal_beli })),
-    expenses: (monthExpenses ?? []).map((e) => ({ date: e.tanggal, amount: e.nominal })),
+    purchases: units.filter((u) => u.tgl_masuk >= monthStart).map((u) => ({ date: u.tgl_masuk, amount: u.modal_beli })),
+    expenses: expenses.filter((e) => e.tanggal >= monthStart).map((e) => ({ date: e.tanggal, amount: e.nominal })),
   });
   const cashIn = cashflow.at(-1)?.in ?? 0;
   const cashOut = cashflow.at(-1)?.out ?? 0;
 
   const withProfit = thisMonthSold
     .map((u) => {
-      const unitExpenses = (expenses ?? []).filter((e) => e.unit_id === u.id);
+      const unitExpenses = expenses.filter((e) => e.unit_id === u.id);
       return { unit: u, profit: unitProfit(u, unitExpenses), totalModal: unitTotalModal(u, unitExpenses) };
     })
     .sort((a, b) => (b.unit.tanggal_jual ?? "").localeCompare(a.unit.tanggal_jual ?? ""));
@@ -90,6 +50,8 @@ export default async function LaporanPage() {
   const best = withProfit.length
     ? [...withProfit].sort((a, b) => (b.unit.harga_jual ?? 0) - (a.unit.harga_jual ?? 0))[0]
     : null;
+
+  if (!allowed) return null;
 
   return (
     <div>
@@ -190,7 +152,7 @@ export default async function LaporanPage() {
         </p>
       </div>
 
-      {profile && isOwner(profile) && (
+      {isOwner(profile) && (
         <Link href="/finance/investor-payouts" className="mt-3.5 block text-center text-xs font-semibold text-primary underline">
           Investor payouts
         </Link>

@@ -1,40 +1,35 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useGarage } from "@/lib/store";
+import { isAdminOrAbove } from "@/types/database";
 import { TeamRoster } from "./TeamRoster";
 import { AddAccountForm } from "./AddAccountForm";
-import { getMyProfile } from "@/lib/session";
-import { isAdminOrAbove } from "@/types/database";
-import type { TeamProfile } from "@/types/database";
 
-export default async function TeamPage() {
-  const supabase = await createClient();
-  const me = await getMyProfile();
+export default function TeamPage() {
+  const router = useRouter();
+  const { data } = useGarage();
+  // Same rule as proxy.ts and the nav tab (owner/admin); the server actions
+  // re-check it, this only keeps others off the screen.
+  const allowed = isAdminOrAbove(data.profile);
+  useEffect(() => {
+    if (!allowed) router.replace("/");
+  }, [allowed, router]);
+  if (!allowed) return null;
 
-  // Server-side guard, same rule as proxy.ts and the nav tab (owner/admin).
-  // The tab being hidden is only a UI convenience; anyone who navigates
-  // here directly must still be turned away.
-  if (!me || !isAdminOrAbove(me)) redirect("/");
-
-  // Only what TeamRoster/AddAccountForm render — skips profile_photo_url
-  // and created_at, which this page never touches.
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, name, role, is_owner, position, tracks_attendance")
-    .order("is_owner", { ascending: false })
-    .limit(200)
-    .returns<TeamProfile[]>();
+  // Owner first, then by name (the store keeps profiles name-sorted).
+  const profiles = [...data.profiles].sort((a, b) => Number(b.is_owner) - Number(a.is_owner));
 
   return (
     <div>
       <div className="mb-4 sm:mb-5 md:mb-6">
         <h1 className="mb-1 text-xl font-extrabold sm:text-[22px] md:text-2xl">Team</h1>
-        <p className="text-sm text-muted-foreground">
-          Accounts, positions, access, and attendance tracking
-        </p>
+        <p className="text-sm text-muted-foreground">Accounts, positions, access, and attendance tracking</p>
       </div>
 
       <AddAccountForm />
-      <TeamRoster profiles={profiles ?? []} />
+      <TeamRoster profiles={profiles} />
     </div>
   );
 }

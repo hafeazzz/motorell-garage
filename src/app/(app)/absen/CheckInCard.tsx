@@ -1,13 +1,30 @@
 "use client";
 
-import { useTransition } from "react";
 import { checkIn } from "./actions";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { useGarage } from "@/lib/store";
+import { cn, todayIso } from "@/lib/utils";
 import type { AttendanceStatus } from "@/types/database";
 
 export function CheckInCard({ existingStatus }: { existingStatus: AttendanceStatus | null }) {
-  const [isPending, startTransition] = useTransition();
+  const { data, run } = useGarage();
+
+  // Shows as checked in the moment it's tapped; rolled back if it fails.
+  function mark(status: AttendanceStatus) {
+    const me = data.profile.id;
+    void run({
+      optimistic: (d) => ({
+        ...d,
+        attendanceToday: [
+          ...d.attendanceToday.filter((a) => a.user_id !== me),
+          { id: -Date.now(), user_id: me, date: todayIso(), status, created_at: new Date().toISOString() },
+        ],
+      }),
+      action: () => checkIn(status),
+      reload: ["attendance"],
+      error: "Gagal menyimpan absen.",
+    });
+  }
 
   if (existingStatus) {
     return (
@@ -23,17 +40,12 @@ export function CheckInCard({ existingStatus }: { existingStatus: AttendanceStat
 
   return (
     <div className="flex gap-2.5">
-      <Button
-        disabled={isPending}
-        onClick={() => startTransition(() => checkIn("masuk"))}
-        className="h-auto flex-1 rounded-2xl py-3.5 text-sm font-bold"
-      >
+      <Button onClick={() => mark("masuk")} className="h-auto flex-1 rounded-2xl py-3.5 text-sm font-bold">
         Check In
       </Button>
       <Button
         variant="outline"
-        disabled={isPending}
-        onClick={() => startTransition(() => checkIn("tidak"))}
+        onClick={() => mark("tidak")}
         className={cn("h-auto flex-1 rounded-2xl bg-secondary py-3.5 text-sm font-bold")}
       >
         Absent

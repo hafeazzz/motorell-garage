@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useGarage } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 import { INSPEKSI_SECTIONS, INS_STATUS } from "@/lib/inspection";
 import { cn } from "@/lib/utils";
@@ -29,7 +29,7 @@ export function InspectionSummary({
   initialItems: Record<string, ItemState>;
   initialNotes: string | null;
 }) {
-  const router = useRouter();
+  const { reload } = useGarage();
   const [items, setItems] = useState(initialItems);
   const [notes, setNotes] = useState(initialNotes);
   const [connected, setConnected] = useState(false);
@@ -69,9 +69,9 @@ export function InspectionSummary({
         (payload) => {
           const r = payload.new as { status: string; notes: string | null; is_deleted: boolean };
           setNotes(r.notes);
-          // Finished, decided or deleted: the server-rendered parts (decision
-          // button, history, badge) are stale — re-render the page.
-          if (r.status !== "draft" || r.is_deleted) router.refresh();
+          // Finished, decided or deleted: refresh the store so the page
+          // switches to the decision / read-only view.
+          if (r.status !== "draft" || r.is_deleted) void reload(["inspections"]);
         }
       )
       .subscribe((status) => {
@@ -82,7 +82,7 @@ export function InspectionSummary({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [inspectionId, live, router]);
+  }, [inspectionId, live, reload]);
 
   const counts = INS_STATUS.map((s) => ({
     ...s,

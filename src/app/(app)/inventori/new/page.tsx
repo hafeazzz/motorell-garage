@@ -1,14 +1,36 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createUnit } from "../actions";
+import { useGarage } from "@/lib/store";
 import { todayIso } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function NewUnitPage() {
+  const router = useRouter();
+  const { reload } = useGarage();
+  const [busy, setBusy] = useState(false);
+
+  async function submit(formData: FormData) {
+    setBusy(true);
+    try {
+      const id = await createUnit(formData);
+      await reload(["units"]);
+      router.push(`/inventori/${id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menambah unit.");
+      setBusy(false);
+    }
+  }
+
   return (
     <div>
       <h1 className="mb-4.5 text-xl font-extrabold">Add unit</h1>
-      <form action={createUnit} className="flex flex-col gap-3">
+      <form action={submit} className="flex flex-col gap-3">
         <Field label="Model name" name="nama" required />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Year" name="tahun" type="number" defaultValue={String(new Date().getFullYear())} />
@@ -31,8 +53,8 @@ export default function NewUnitPage() {
         <Field label="Purchase cost (Rp)" name="modal_beli" type="number" required />
         <Field label="Date acquired" name="tgl_masuk" type="date" defaultValue={todayIso()} />
 
-        <Button type="submit" className="mt-1 w-full">
-          Create unit
+        <Button type="submit" disabled={busy} className="mt-1 w-full">
+          {busy ? "Menyimpan…" : "Create unit"}
         </Button>
       </form>
     </div>

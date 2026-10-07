@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useGarage } from "@/lib/store";
 import { toast } from "sonner";
 import { changeMyPassword, updateMyName, updateMyPhoto } from "@/app/(app)/account-actions";
 import { createClient } from "@/lib/supabase/client";
@@ -26,7 +26,7 @@ const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const profile = useProfile();
-  const router = useRouter();
+  const { reload } = useGarage();
   const [name, setName] = useState(profile.name);
   const [photoUrl, setPhotoUrl] = useState<string | null>(profile.profile_photo_url);
   const [uploading, setUploading] = useState(false);
@@ -75,8 +75,8 @@ export function ProfileDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         if (name.trim() !== profile.name) await updateMyName(name);
         if (photoUrl !== profile.profile_photo_url) await updateMyPhoto(photoUrl);
         toast.success("Profil diperbarui.");
+        await reload(["profiles"]);
         onOpenChange(false);
-        router.refresh();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Gagal menyimpan profil.");
       }

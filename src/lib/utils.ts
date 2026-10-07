@@ -38,9 +38,11 @@ export function formatPeriodLabel(key: string): string {
   return `${MONTHS[m - 1]} ${y}`;
 }
 
+// Always the WIB calendar date: the browser (phone clock) and the server
+// (Vercel, UTC) must agree on what "today" is, or a check-in before 07:00
+// WIB landed on yesterday's row.
 export function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return jakartaDateIso(new Date());
 }
 
 type Period = "pagi" | "siang" | "sore" | "malam";

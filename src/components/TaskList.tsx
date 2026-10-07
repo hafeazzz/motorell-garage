@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useProfile } from "@/lib/profile-context";
+import { useGarage } from "@/lib/store";
 import { toggleTaskStatus, addTask, deleteTask } from "@/app/(app)/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ import type { Task } from "@/types/database";
 export function TaskList({ tasks }: { tasks: Task[] }) {
   const profile = useProfile();
   const isAdmin = isAdminOrAbove(profile);
-  const [isPending, startTransition] = useTransition();
+  const { run } = useGarage();
   const [editing, setEditing] = useState(false);
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [newName, setNewName] = useState("");
@@ -58,12 +59,15 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                   size="sm"
                   variant="destructive"
                   className="h-auto rounded-full px-3 py-1 text-[11.5px]"
-                  onClick={() =>
-                    startTransition(async () => {
-                      await deleteTask(task.id);
-                      setConfirmingId(null);
-                    })
-                  }
+                  onClick={() => {
+                    setConfirmingId(null);
+                    void run({
+                      optimistic: (d) => ({ ...d, tasks: d.tasks.filter((t) => t.id !== task.id) }),
+                      action: () => deleteTask(task.id),
+                      reload: ["tasks"],
+                      error: "Gagal menghapus task.",
+                    });
+                  }}
                 >
                   Delete
                 </Button>
@@ -74,15 +78,30 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
 
         return (
           <div key={task.id} className="mb-2.5 flex items-center gap-2.5 rounded-[14px] bg-secondary px-3.5 py-3">
+            {/* 44px tap area around the 22px circle — easy to hit on a phone. */}
             <button
-              disabled={isPending}
-              onClick={() => startTransition(() => toggleTaskStatus(task.id, task.status))}
-              className={cn(
-                "size-[22px] shrink-0 rounded-full border-2",
-                task.status === "done" ? "border-primary bg-primary" : "border-white/20 bg-transparent"
-              )}
+              onClick={() =>
+                void run({
+                  optimistic: (d) => ({
+                    ...d,
+                    tasks: d.tasks.map((t) =>
+                      t.id === task.id ? { ...t, status: t.status === "done" ? "pending" : "done" } : t
+                    ),
+                  }),
+                  action: () => toggleTaskStatus(task.id, task.status),
+                  reload: ["tasks"],
+                })
+              }
+              className="-m-2.5 grid size-11 shrink-0 place-items-center"
               aria-label="Toggle done"
-            />
+            >
+              <span
+                className={cn(
+                  "size-[22px] rounded-full border-2 transition-colors",
+                  task.status === "done" ? "border-primary bg-primary" : "border-white/20 bg-transparent"
+                )}
+              />
+            </button>
             <div className="min-w-0 flex-1">
               <div
                 className={cn(
@@ -99,12 +118,12 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
             {editing && (
               <Button
                 variant="ghost"
-                size="icon-xs"
-                className="rounded-lg bg-card"
+                size="icon"
+                className="size-10 rounded-xl bg-card text-destructive"
                 onClick={() => setConfirmingId(task.id)}
                 aria-label="Delete task"
               >
-                <Trash2 className="size-3" />
+                <Trash2 className="size-4" />
               </Button>
             )}
           </div>
@@ -128,14 +147,23 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
           <Button
             size="sm"
             className="self-end rounded-full px-3.5"
-            onClick={() =>
-              startTransition(async () => {
-                if (!newName.trim()) return;
-                await addTask(newName, newAssignee);
-                setNewName("");
-                setNewAssignee("");
-              })
-            }
+            onClick={() => {
+              if (!newName.trim()) return;
+              const name = newName.trim();
+              const assignee = newAssignee.trim() || null;
+              setNewName("");
+              setNewAssignee("");
+              void run({
+                // Temporary negative id until the reload brings the real row.
+                optimistic: (d) => ({
+                  ...d,
+                  tasks: [...d.tasks, { id: -Date.now(), name, assignee, status: "pending", created_at: new Date().toISOString() }],
+                }),
+                action: () => addTask(name, assignee ?? ""),
+                reload: ["tasks"],
+                error: "Gagal menambah task.",
+              });
+            }}
           >
             Add task
           </Button>

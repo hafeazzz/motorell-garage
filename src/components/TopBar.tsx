@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { KeyRound, LogOut, UserPen } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/lib/profile-context";
@@ -11,15 +10,14 @@ import { PasswordDialog, ProfileDialog } from "@/components/AccountDialogs";
 
 export function TopBar() {
   const profile = useProfile();
-  const router = useRouter();
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
 
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    // Full page load: drops everything the store held in memory.
+    window.location.replace("/login");
   }
 
   const initial = profile.name.charAt(0).toUpperCase();

@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { setMonthlyTarget } from "@/app/(app)/actions";
+import { useGarage } from "@/lib/store";
 import { rupiah } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export function ProfitCard({ netProfit, monthlyTarget }: { netProfit: number; monthlyTarget: number }) {
-  const [isPending, startTransition] = useTransition();
+  const { run } = useGarage();
   const [showInput, setShowInput] = useState(false);
   const [value, setValue] = useState(String(monthlyTarget));
 
@@ -48,13 +49,16 @@ export function ProfitCard({ netProfit, monthlyTarget }: { netProfit: number; mo
           />
           <Button
             size="sm"
-            disabled={isPending}
-            onClick={() =>
-              startTransition(async () => {
-                await setMonthlyTarget(Number(value) || 0);
-                setShowInput(false);
-              })
-            }
+            onClick={() => {
+              const amount = Number(value) || 0;
+              setShowInput(false);
+              void run({
+                optimistic: (d) => ({ ...d, monthlyTarget: amount }),
+                action: () => setMonthlyTarget(amount),
+                reload: ["settings"],
+                error: "Gagal menyimpan target.",
+              });
+            }}
           >
             Save
           </Button>

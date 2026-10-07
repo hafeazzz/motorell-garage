@@ -1,30 +1,20 @@
+"use client";
+
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/auth-utils";
+import { useGarage } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { INS_TOTAL, INSPECTION_STATUS_LABEL as STATUS_LABEL, INSPECTION_STATUS_STYLE as STATUS_STYLE } from "@/lib/inspection";
 import { cn, formatDateStr, rupiah } from "@/lib/utils";
 import { canManageInspections } from "@/types/database";
 import { DeleteInspectionButton } from "./DeleteInspectionButton";
-import type { Inspection } from "@/types/database";
 
-type Row = Inspection & { profiles: { name: string } | null; inspection_items: { count: number }[] };
-
-export default async function InspeksiPage() {
-  const supabase = await createClient();
-  const profile = await getCurrentProfile();
-  const admin = canManageInspections(profile);
-
-  const { data } = await supabase
-    .from("inspections")
-    .select("*, profiles(name), inspection_items(count)")
-    .eq("is_deleted", false)
-    .order("created_at", { ascending: false })
-    .limit(100)
-    .returns<Row[]>();
-  const rows = data ?? [];
+export default function InspeksiPage() {
+  const { data } = useGarage();
+  const admin = canManageInspections(data.profile);
+  const nameOf = (id: string | null) => data.profiles.find((p) => p.id === id)?.name;
+  const rows = data.inspections;
 
   return (
     <div>
@@ -36,7 +26,8 @@ export default async function InspeksiPage() {
       <Button
         variant="outline"
         className="mb-3.5 w-full gap-2 rounded-2xl border-primary bg-secondary py-6 text-[13.5px] font-bold text-primary hover:bg-secondary/80 md:mb-5 md:w-auto"
-        render={<Link href="/inspeksi/new" />}
+        nativeButton={false}
+          render={<Link href="/inspeksi/new" />}
       >
         <Plus className="size-4" />
         Inspeksi baru
@@ -54,10 +45,10 @@ export default async function InspeksiPage() {
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-bold">{r.nama}</div>
                 <div className="truncate text-xs text-muted-foreground">
-                  {[r.tahun, r.plat].filter(Boolean).join(" · ") || "—"} · {r.profiles?.name ?? "Tidak dikenal"}
+                  {[r.tahun, r.plat].filter(Boolean).join(" · ") || "—"} · {nameOf(r.inspector_id) ?? "Tidak dikenal"}
                 </div>
                 <div className="mt-0.5 text-[11.5px] text-muted-foreground">
-                  {r.inspection_items[0]?.count ?? 0}/{INS_TOTAL} item · {formatDateStr(r.created_at.slice(0, 10))}
+                  {r.item_count}/{INS_TOTAL} item · {formatDateStr(r.created_at.slice(0, 10))}
                 </div>
               </div>
               <Badge className={cn("shrink-0 rounded-full px-2.5 py-1.5 text-[11px] font-bold", STATUS_STYLE[r.status])}>

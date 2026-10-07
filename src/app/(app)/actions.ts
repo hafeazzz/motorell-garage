@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { TaskStatus } from "@/types/database";
 
@@ -17,7 +16,6 @@ export async function toggleTaskStatus(taskId: number, currentStatus: TaskStatus
   });
   if (error) throw new Error(error.message);
 
-  revalidatePath("/");
 }
 
 export async function addTask(name: string, assignee: string) {
@@ -29,7 +27,6 @@ export async function addTask(name: string, assignee: string) {
   });
   if (error) throw new Error(error.message);
 
-  revalidatePath("/");
 }
 
 export async function deleteTask(taskId: number) {
@@ -37,7 +34,6 @@ export async function deleteTask(taskId: number) {
   const { error } = await supabase.from("tasks").delete().eq("id", taskId);
   if (error) throw new Error(error.message);
 
-  revalidatePath("/");
 }
 
 export async function setMonthlyTarget(amount: number) {
@@ -48,5 +44,4 @@ export async function setMonthlyTarget(amount: number) {
     .eq("key", "monthly_target");
   if (error) throw new Error(error.message);
 
-  revalidatePath("/");
 }

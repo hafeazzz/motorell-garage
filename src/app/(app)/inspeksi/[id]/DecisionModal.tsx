@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useGarage } from "@/lib/store";
 import { toast } from "sonner";
 import { decideInspection } from "../actions";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ export function DecisionModal({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const { reload } = useGarage();
   const [step, setStep] = useState<"decision" | "price">("decision");
   const [price, setPrice] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -57,9 +59,10 @@ export function DecisionModal({
         } else {
           toast.success("Inspeksi ditandai: tidak dibeli.");
         }
+        // A "beli" decision created a unit — load it before opening its page.
+        await reload(["inspections", "units"]);
         onOpenChange(false);
         router.push(result.redirectTo);
-        router.refresh();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Gagal menyimpan keputusan.");
       }

@@ -12,12 +12,10 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    // Keep a visited/prefetched tab in the client router cache for 30s, so
-    // flipping back and forth between bottom-nav tabs is instant instead of
-    // a fresh server render every tap. Any server action that calls
-    // revalidatePath()/router.refresh() still clears it immediately, so your
-    // own changes always show up right away.
-    staleTimes: { dynamic: 30, static: 180 },
+    // (app) pages hold no data (it lives in the client store), so a page
+    // once prefetched can be reused for the whole session — tab switches
+    // never go back to the server.
+    staleTimes: { dynamic: 30, static: 3600 },
   },
 };
 

@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getCurrentProfile } from "@/lib/auth-utils";
@@ -21,7 +20,6 @@ export async function updateMyName(name: string) {
   const { error } = await supabase.rpc("rename_self", { new_name: trimmed });
   if (error) throw new Error(error.message);
 
-  revalidatePath("/", "layout");
 }
 
 /**
@@ -44,7 +42,6 @@ export async function updateMyPhoto(photoUrl: string | null) {
     .eq("id", profile.id);
   if (error) throw new Error(error.message);
 
-  revalidatePath("/", "layout");
 }
 
 export async function changeMyPassword(currentPassword: string, newPassword: string) {

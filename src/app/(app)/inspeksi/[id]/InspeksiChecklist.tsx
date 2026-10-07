@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useGarage } from "@/lib/store";
 import { toast } from "sonner";
 import { Camera, ChevronDown } from "lucide-react";
 import { setItem, saveNotes, finishInspection } from "../actions";
@@ -32,7 +32,7 @@ export function InspeksiChecklist({
   initialItems: Record<string, ItemState>;
   initialNotes: string;
 }) {
-  const router = useRouter();
+  const { reload } = useGarage();
   const [items, setItems] = useState(initialItems);
   const [notes, setNotes] = useState(initialNotes);
   const [openSec, setOpenSec] = useState("A");
@@ -228,7 +228,7 @@ export function InspeksiChecklist({
         open={decisionOpen}
         onOpenChange={(o) => {
           setDecisionOpen(o);
-          if (!o && finished) router.refresh();
+          if (!o && finished) void reload(["inspections"]);
         }}
       />
     </div>

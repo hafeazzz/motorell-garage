@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Pencil, Trash2 } from "lucide-react";
+import { useGarage } from "@/lib/store";
 import {
   updatePosition,
   updateRole,
@@ -62,6 +63,9 @@ function OwnerCard({ profile }: { profile: TeamProfile }) {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(profile.name);
   const [isPending, startTransition] = useTransition();
+  const { run, reload } = useGarage();
+  // Every change re-reads the roster so all screens (Absen, Team) follow.
+  const save = (action: () => Promise<unknown>) => void run({ action, reload: ["profiles"] });
 
   return (
     <div className="rounded-2xl border border-border bg-card p-3.5">
@@ -99,6 +103,7 @@ function OwnerCard({ profile }: { profile: TeamProfile }) {
             onClick={() =>
               startTransition(async () => {
                 if (name.trim()) await renameProfile(profile.id, name);
+                await reload(["profiles"]);
                 setRenaming(false);
               })
             }
@@ -113,6 +118,9 @@ function OwnerCard({ profile }: { profile: TeamProfile }) {
 
 function MemberCard({ profile }: { profile: TeamProfile }) {
   const [isPending, startTransition] = useTransition();
+  const { run, reload } = useGarage();
+  // Every change re-reads the roster so all screens (Absen, Team) follow.
+  const save = (action: () => Promise<unknown>) => void run({ action, reload: ["profiles"] });
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(profile.name);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -141,8 +149,8 @@ function MemberCard({ profile }: { profile: TeamProfile }) {
         <Dialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
           <Button
             variant="ghost"
-            size="icon-xs"
-            className="rounded-lg bg-secondary"
+            size="icon"
+            className="size-10 rounded-xl bg-secondary text-destructive"
             onClick={() => setConfirmingDelete(true)}
             aria-label="Remove account"
           >
@@ -159,7 +167,16 @@ function MemberCard({ profile }: { profile: TeamProfile }) {
               <Button
                 variant="destructive"
                 disabled={isPending}
-                onClick={() => startTransition(() => deleteAccount(profile.id))}
+                onClick={() => {
+                  setConfirmingDelete(false);
+                  void run({
+                    optimistic: (d) => ({ ...d, profiles: d.profiles.filter((p) => p.id !== profile.id) }),
+                    action: () => deleteAccount(profile.id),
+                    reload: ["profiles"],
+                    success: "Akun dihapus.",
+                    error: "Gagal menghapus akun.",
+                  });
+                }}
               >
                 Remove
               </Button>
@@ -181,6 +198,7 @@ function MemberCard({ profile }: { profile: TeamProfile }) {
             onClick={() =>
               startTransition(async () => {
                 if (name.trim()) await renameProfile(profile.id, name);
+                await reload(["profiles"]);
                 setRenaming(false);
               })
             }
@@ -193,7 +211,7 @@ function MemberCard({ profile }: { profile: TeamProfile }) {
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
         <Select
           defaultValue={profile.position}
-          onValueChange={(v) => v && startTransition(() => updatePosition(profile.id, v))}
+          onValueChange={(v) => v && save(() => updatePosition(profile.id, v))}
         >
           <SelectTrigger size="sm" className="bg-secondary text-xs">
             <SelectValue />
@@ -208,7 +226,7 @@ function MemberCard({ profile }: { profile: TeamProfile }) {
         </Select>
         <Select
           defaultValue={profile.role}
-          onValueChange={(v) => v && startTransition(() => updateRole(profile.id, v as Role))}
+          onValueChange={(v) => v && save(() => updateRole(profile.id, v as Role))}
         >
           <SelectTrigger size="sm" className="bg-secondary text-xs">
             <SelectValue />
@@ -223,7 +241,7 @@ function MemberCard({ profile }: { profile: TeamProfile }) {
           <input
             type="checkbox"
             defaultChecked={profile.tracks_attendance}
-            onChange={(e) => startTransition(() => updateTracksAttendance(profile.id, e.target.checked))}
+            onChange={(e) => save(() => updateTracksAttendance(profile.id, e.target.checked))}
             className="size-3.5 accent-primary"
           />
           Attendance

@@ -1,4 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { HISTORY_ACTION_LABEL } from "@/lib/inspection";
 import { formatDateTimeJakarta } from "@/lib/utils";
 import type { InspectionHistoryEntry } from "@/types/database";
@@ -7,15 +10,25 @@ import type { InspectionHistoryEntry } from "@/types/database";
 // (service role); this just reads them. If the phase-3b migration hasn't
 // been run the query fails and the section shows nothing rather than
 // breaking the page.
-export async function InspectionHistory({ inspectionId }: { inspectionId: number }) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("inspection_history")
-    .select("*")
-    .eq("inspection_id", inspectionId)
-    .order("created_at", { ascending: true })
-    .returns<InspectionHistoryEntry[]>();
-  const entries = data ?? [];
+// `version` changes whenever the inspection moves on (status), so a new
+// entry (completed / decided) is picked up without a page reload.
+export function InspectionHistory({ inspectionId, version }: { inspectionId: number; version?: string }) {
+  const [entries, setEntries] = useState<InspectionHistoryEntry[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    createClient()
+      .from("inspection_history")
+      .select("*")
+      .eq("inspection_id", inspectionId)
+      .order("created_at", { ascending: true })
+      .returns<InspectionHistoryEntry[]>()
+      .then(({ data }) => {
+        if (!cancelled) setEntries(data ?? []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [inspectionId, version]);
   if (entries.length === 0) return null;
 
   return (

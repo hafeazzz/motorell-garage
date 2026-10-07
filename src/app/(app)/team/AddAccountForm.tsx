@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { createAccount } from "./actions";
+import { useGarage } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,7 @@ const POSITIONS = ["Freelancer", "Mechanic", "Field", "Finance", "Admin", "Maste
 export function AddAccountForm() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const { reload } = useGarage();
   const [error, setError] = useState<string | null>(null);
 
   if (!open) {
@@ -39,6 +41,7 @@ export function AddAccountForm() {
           setError(null);
           try {
             await createAccount(formData);
+            await reload(["profiles"]);
             setOpen(false);
           } catch (e) {
             setError(e instanceof Error ? e.message : "Something went wrong.");

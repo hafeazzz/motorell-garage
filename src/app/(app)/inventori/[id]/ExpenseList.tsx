@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
+import { useGarage } from "@/lib/store";
+import { todayIso } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 import { addExpense, deleteExpense } from "../actions";
 import { rupiah, formatDateStr } from "@/lib/utils";
@@ -10,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import type { UnitExpense } from "@/types/database";
 
 export function ExpenseList({ unitId, expenses }: { unitId: number; expenses: UnitExpense[] }) {
-  const [isPending, startTransition] = useTransition();
+  const { run } = useGarage();
   const [keterangan, setKeterangan] = useState("");
   const [nominal, setNominal] = useState("");
 
@@ -35,13 +37,19 @@ export function ExpenseList({ unitId, expenses }: { unitId: number; expenses: Un
             <span className="text-[13px] font-bold whitespace-nowrap">{rupiah(e.nominal)}</span>
             <Button
               variant="ghost"
-              size="icon-xs"
-              className="rounded-lg bg-card"
-              disabled={isPending}
-              onClick={() => startTransition(() => deleteExpense(unitId, e.id))}
+              size="icon"
+              className="size-10 rounded-xl bg-card text-destructive"
+              onClick={() =>
+                void run({
+                  optimistic: (d) => ({ ...d, expenses: d.expenses.filter((x) => x.id !== e.id) }),
+                  action: () => deleteExpense(unitId, e.id),
+                  reload: ["expenses"],
+                  error: "Gagal menghapus pengeluaran.",
+                })
+              }
               aria-label="Delete expense"
             >
-              <Trash2 className="size-3" />
+              <Trash2 className="size-4" />
             </Button>
           </div>
         </div>
@@ -70,18 +78,28 @@ export function ExpenseList({ unitId, expenses }: { unitId: number; expenses: Un
         </div>
         <Button
           className="w-full"
-          disabled={isPending}
-          onClick={() =>
-            startTransition(async () => {
-              if (!keterangan.trim() || !nominal) return;
-              const fd = new FormData();
-              fd.set("keterangan", keterangan);
-              fd.set("nominal", nominal);
-              await addExpense(unitId, fd);
-              setKeterangan("");
-              setNominal("");
-            })
-          }
+          onClick={() => {
+            if (!keterangan.trim() || !nominal) return;
+            const fd = new FormData();
+            fd.set("keterangan", keterangan);
+            fd.set("nominal", nominal);
+            const row = {
+              id: -Date.now(),
+              unit_id: unitId,
+              keterangan: keterangan.trim(),
+              nominal: Number(nominal) || 0,
+              tanggal: todayIso(),
+              created_at: new Date().toISOString(),
+            };
+            setKeterangan("");
+            setNominal("");
+            void run({
+              optimistic: (d) => ({ ...d, expenses: [row, ...d.expenses] }),
+              action: () => addExpense(unitId, fd),
+              reload: ["expenses"],
+              error: "Gagal menambah pengeluaran.",
+            });
+          }}
         >
           Add expense
         </Button>
