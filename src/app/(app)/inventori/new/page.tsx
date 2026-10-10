@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createUnit } from "../actions";
@@ -14,15 +14,25 @@ export default function NewUnitPage() {
   const router = useRouter();
   const { reload } = useGarage();
   const [busy, setBusy] = useState(false);
+  // One token per mount, resent on every submit of this form — lets the
+  // server recognize a double submit as a repeat rather than a new unit.
+  const clientToken = useRef(crypto.randomUUID());
+  // A ref, not just `busy` state: state updates aren't synchronous, so a
+  // second click fired before the re-render would still slip through.
+  const submitting = useRef(false);
 
   async function submit(formData: FormData) {
+    if (submitting.current) return;
+    submitting.current = true;
     setBusy(true);
+    formData.set("client_token", clientToken.current);
     try {
       const id = await createUnit(formData);
       await reload(["units"]);
       router.push(`/inventori/${id}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal menambah unit.");
+      submitting.current = false;
       setBusy(false);
     }
   }
