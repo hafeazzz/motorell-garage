@@ -7,10 +7,20 @@ import { syncInvestorPayouts } from "@/lib/investors";
 import { todayIso } from "@/lib/utils";
 import type { UnitStatus } from "@/types/database";
 
-/** Returns the new unit id — the client opens its page. */
+/**
+ * Returns the new unit id — the client opens its page.
+ *
+ * client_token is a UUID the client generates once per form mount. A
+ * double submit (double-tap, slow network + client-side retry) resends
+ * the same token, which trips the unique index on units.client_token
+ * (23505) instead of inserting a second unit — that case is resolved by
+ * looking the existing unit up by its token and returning its id.
+ */
 export async function createUnit(formData: FormData): Promise<number> {
   await requireInventoryAccess();
   const supabase = await createClient();
+  const clientToken = String(formData.get("client_token") || "") || null;
+
   const { data, error } = await supabase
     .from("units")
     .insert({
@@ -21,11 +31,23 @@ export async function createUnit(formData: FormData): Promise<number> {
       status: String(formData.get("status") || "progress") as UnitStatus,
       modal_beli: Number(formData.get("modal_beli")) || 0,
       tgl_masuk: String(formData.get("tgl_masuk") || todayIso()),
+      client_token: clientToken,
     })
     .select("id")
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.code === "23505" && clientToken) {
+      const { data: existing, error: lookupError } = await supabase
+        .from("units")
+        .select("id")
+        .eq("client_token", clientToken)
+        .single();
+      if (lookupError) throw new Error(lookupError.message);
+      return existing.id as number;
+    }
+    throw new Error(error.message);
+  }
   return data.id as number;
 }
 
