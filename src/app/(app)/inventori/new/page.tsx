@@ -28,8 +28,8 @@ export default function NewUnitPage() {
     formData.set("client_token", clientToken.current);
     try {
       const id = await createUnit(formData);
-      await reload(["units"]);
       router.push(`/inventori/${id}`);
+      void reload(["units"]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal menambah unit.");
       submitting.current = false;
